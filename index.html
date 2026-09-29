@@ -1,0 +1,1916 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Underwater Optics Bench</title>
+<meta name="description" content="Interactive 3D lab: how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
+<meta property="og:title" content="Underwater Optics Bench">
+<meta property="og:description" content="Interactive 3D lab: how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
+<meta property="og:type" content="website">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Single committed dark look: an optical bench in a darkened lab, built to read on a projector. */
+  :root {
+    color-scheme: dark;
+    --ink: #0A1215;
+    --panel: #0F1A1E;
+    --panel-2: #14242A;
+    --line: #22373E;
+    --text: #E3ECEA;
+    --muted: #8BA2A6;
+    --amber: #F2B64E;
+    --sea: #43A9C6;
+    --good: #6BCB8B;
+    --warn: #F2B64E;
+    --bad: #F0735A;
+    --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  html, body { height: 100%; }
+  body { background: var(--ink); color: var(--text); font: 15px/1.5 var(--body); }
+  #app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--ink);
+  }
+  .brand { font: 700 21px/1 var(--display); letter-spacing: .05em; text-transform: uppercase; }
+  .brand small { display: block; margin-top: 4px; font: 500 12px/1 var(--display); letter-spacing: .14em; color: var(--muted); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .tab {
+    font: 600 15px/1 var(--display); letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); background: none; border: 0; padding: 9px 14px; border-radius: 7px; cursor: pointer;
+  }
+  .tab .n { opacity: .55; margin-right: 6px; font-family: var(--mono); font-size: 12px; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { background: var(--text); color: var(--ink); }
+  .tab[aria-selected="true"] .n { opacity: .7; }
+
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 390px; min-height: 0; }
+  #stage { position: relative; min-height: 0; overflow: hidden; }
+  #gl { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  #gl:active { cursor: grabbing; }
+  #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .lbl {
+    position: absolute; left: 0; top: 0; white-space: nowrap;
+    font: 600 12.5px/1.2 var(--display); letter-spacing: .07em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 4px; color: var(--text);
+    background: rgba(10, 18, 21, .78); border: 1px solid rgba(227, 236, 234, .16);
+  }
+  .viewbar { position: absolute; left: 16px; bottom: 16px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .vbtn {
+    font: 600 13px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text); background: rgba(15, 26, 30, .85); border: 1px solid var(--line);
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  }
+  .vbtn:hover { border-color: var(--muted); }
+  .hint { position: absolute; right: 16px; bottom: 20px; color: var(--muted); font-size: 12.5px; text-align: right; }
+  .scalenote { position: absolute; left: 16px; top: 14px; color: var(--muted); font: 500 12.5px/1.3 var(--display); letter-spacing: .08em; text-transform: uppercase; max-width: 60%; }
+
+  aside { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 18px 18px 32px; }
+  .mod { display: flex; flex-direction: column; gap: 18px; }
+  h2 { margin: 0; font: 700 28px/1.02 var(--display); text-transform: uppercase; letter-spacing: .02em; text-wrap: balance; }
+  .lede { margin: 6px 0 0; color: var(--muted); }
+  .group { display: flex; flex-direction: column; gap: 14px; }
+  .eyebrow { font: 600 12px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+
+  .ctrl { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: baseline; }
+  .ctrl label, .ctrl .clabel { font-weight: 600; font-size: 14.5px; }
+  .ctrl output { font: 600 13px var(--mono); color: var(--amber); font-variant-numeric: tabular-nums; }
+  .ctrl input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--amber); margin: 2px 0 0; }
+  .seg { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+  .seg button {
+    flex: 1 1 auto; font: 600 13.5px/1 var(--display); letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 10px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { color: var(--ink); background: var(--amber); border-color: var(--amber); }
+  .tog { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14.5px; cursor: pointer; }
+  .tog input { width: 18px; height: 18px; accent-color: var(--amber); }
+
+  .inset { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .inset canvas { display: block; width: 100%; height: auto; border-radius: 6px; background: #000; }
+  .inset .cap { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+
+  .readouts { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; margin: 0; }
+  .readouts dt { color: var(--muted); font-size: 14px; }
+  .readouts dd { margin: 0; font: 600 13.5px var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; font: 600 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; padding: 3px 6px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; }
+  .pill.good { background: rgba(107, 203, 139, .16); color: var(--good); }
+  .pill.warn { background: rgba(242, 182, 78, .16); color: var(--warn); }
+  .pill.bad { background: rgba(240, 115, 90, .16); color: var(--bad); }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
+
+  .talk { border-top: 1px solid var(--line); padding-top: 16px; }
+  .talk p { margin: 0 0 10px; max-width: 62ch; }
+  .talk p:last-child { margin-bottom: 0; }
+  .talk b { color: var(--amber); font-weight: 600; }
+
+  .jump {
+    margin-top: 10px; font: 600 13px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--sea); background: none; border: 1px solid rgba(67, 169, 198, .45); border-radius: 6px; padding: 7px 10px; cursor: pointer;
+  }
+  .jump:hover { background: rgba(67, 169, 198, .12); }
+  .ws { border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 12px; }
+  .ws-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .ws h3 { margin: 0; font: 700 22px/1.05 var(--display); text-transform: uppercase; letter-spacing: .03em; text-wrap: balance; }
+  .ws-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ws .vbtn[aria-pressed="true"] { background: var(--good); color: var(--ink); border-color: var(--good); }
+  .ws-note { margin: 0; color: var(--muted); font-size: 14px; }
+  .ws-list { margin: 0; padding-left: 1.6em; display: flex; flex-direction: column; gap: 16px; }
+  .ws-list li::marker { font: 600 14px var(--mono); color: var(--amber); }
+  .ws-list .set {
+    display: inline-block; margin-bottom: 5px; font: 600 11.5px/1.4 var(--mono); color: var(--sea);
+    background: rgba(67, 169, 198, .1); border: 1px solid rgba(67, 169, 198, .28); border-radius: 4px; padding: 2px 6px;
+  }
+  .ws-list .q { margin: 0; max-width: 62ch; }
+  .ans { margin-top: 8px; padding: 10px 12px; font-size: 14px; background: rgba(107, 203, 139, .07); border: 1px solid rgba(107, 203, 139, .25); border-radius: 6px; }
+  .ans b { color: var(--good); font-weight: 600; }
+  .ans-l { display: block; margin-bottom: 4px; font: 600 11px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--good); }
+  .ws-copy { width: 100%; min-height: 160px; font: 13px/1.45 var(--mono); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  @media (max-width: 900px) {
+    #app { height: auto; }
+    main { grid-template-columns: 1fr; grid-template-rows: 60vh auto; }
+    aside { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+    .hint { display: none; }
+    .scalenote { max-width: 90%; }
+  }
+</style>
+</head>
+<body>
+<noscript><p style="padding:24px;font:16px system-ui,sans-serif;color:#E3ECEA">This lab needs JavaScript and a browser with WebGL (any current version of Chrome, Edge, Firefox or Safari).</p></noscript>
+
+<div id="app">
+  <header>
+    <div class="brand">Underwater Optics Bench<small>OS207 · Light &amp; imaging lab</small></div>
+    <nav class="tabs" role="tablist" aria-label="Experiments">
+      <button class="tab" role="tab" id="tab-0" aria-selected="true" data-mod="0"><span class="n">1</span>Focus in air</button>
+      <button class="tab" role="tab" id="tab-1" aria-selected="false" data-mod="1"><span class="n">2</span>Behind the port</button>
+      <button class="tab" role="tab" id="tab-2" aria-selected="false" data-mod="2"><span class="n">3</span>Light in water</button>
+    </nav>
+  </header>
+  <main>
+    <section id="stage" aria-label="3D laboratory">
+      <canvas id="gl"></canvas>
+      <div id="labels"></div>
+      <div class="scalenote" id="scalenote"></div>
+      <div class="viewbar">
+        <button class="vbtn" id="v-side">Side view</button>
+        <button class="vbtn" id="v-3d">3D view</button>
+      </div>
+      <div class="hint">Drag to orbit · scroll or pinch to zoom · shift-drag to pan</div>
+    </section>
+    <aside id="panel"></aside>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const YAXIS = V(0, 1, 0);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const deg = r => r * 180 / Math.PI, rad = d => d * Math.PI / 180;
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- renderer, scene, camera ---------- */
+const canvas = document.getElementById('gl');
+const stage = document.getElementById('stage');
+const labelsEl = document.getElementById('labels');
+/* Three layers per frame:
+   1. world   – physically lit scenery, rendered to an HDR target that keeps its depth
+   2. water   – a full-screen pass that ray-marches the water volume against that depth
+                (per-wavelength absorption, scattering, sun shafts), then tone-maps
+   3. overlay – the teaching diagram (rays, cones, markers), drawn crisp on top */
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const PR = Math.min(window.devicePixelRatio || 1, 1.5);
+renderer.setPixelRatio(PR);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const HDR = renderer.capabilities.isWebGL2 && !!renderer.extensions.get('EXT_color_buffer_float');
+const world = new THREE.Scene();
+const overlay = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(38, 1, 0.05, 900);
+const lin = c => new THREE.Color(c).convertSRGBToLinear();
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x202020, 0.6);
+world.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.03;
+world.add(sun, sun.target);
+function setLights(o) {
+  hemi.color.copy(lin(o.sky)); hemi.groundColor.copy(lin(o.ground)); hemi.intensity = o.hemi;
+  sun.color.copy(lin(o.sunCol)); sun.intensity = o.sun;
+  sun.position.copy(o.pos); sun.target.position.copy(o.target);
+  const c = sun.shadow.camera;
+  c.left = c.bottom = -o.ext; c.right = c.top = o.ext; c.near = 0.5; c.far = o.far || 140;
+  c.updateProjectionMatrix();
+}
+overlay.add(new THREE.HemisphereLight(0xdfefff, 0x0a1a20, 0.9));
+const ovSun = new THREE.DirectionalLight(0xffffff, 0.9);
+ovSun.position.set(5, 12, 6);
+overlay.add(ovSun);
+
+/* ---------- spectral model shared by the shaders and the insets ---------- */
+const WL = [400, 450, 500, 550, 600, 650, 700];
+const BINW = [[0.15, 0, 0.5], [0.05, 0.1, 1.0], [0, 0.6, 0.5], [0.35, 1.0, 0.05], [1.0, 0.55, 0], [1.0, 0.1, 0], [0.35, 0, 0]];
+const BINN = [2.9, 2.35, 2.05];
+const wrow = c => BINW.map(w => (w[c] / BINN[c]).toFixed(5));
+const glDot = c => { const r = wrow(c); return `dot(a, vec4(${r.slice(0, 4)})) + dot(b, vec3(${r.slice(4)}))`; };
+
+/* uniforms shared by the water pass and every underwater material */
+const UW = {
+  uOn: { value: 0 }, uBoxMin: { value: V(0, 0, 0) }, uBoxMax: { value: V(0, 0, 0) },
+  uSurfY: { value: 0 }, uMpu: { value: 1 }, uDepthOffset: { value: 0 },
+  uKdA: { value: new THREE.Vector4() }, uKdB: { value: V(0, 0, 0) },
+  uAdapt: { value: 0.6 }, uTime: { value: 0 },
+  uSunW: { value: V(0, -1, 0) }, uCosT: { value: 1 },
+  uCaust: { value: 0 }, uCausScale: { value: 1 },
+  uSigT: { value: V(0, 0, 0) }, uSigS: { value: V(0, 0, 0) },
+  uSunCol: { value: V(1, 1, 1) }, uSkyCol: { value: V(0.3, 0.3, 0.3) },
+  uShaft: { value: 0 }, uShaftScale: { value: 0.5 }, uShaftFade: { value: 0.05 },
+  uExposure: { value: 1 }, uVignette: { value: 0.35 }
+};
+const UW_GLSL = `
+uniform float uOn; uniform vec3 uBoxMin; uniform vec3 uBoxMax;
+uniform float uSurfY; uniform float uMpu; uniform float uDepthOffset;
+uniform vec4 uKdA; uniform vec3 uKdB; uniform float uAdapt; uniform float uTime;
+uniform vec3 uSunW; uniform float uCaust; uniform float uCausScale;
+vec3 uwDown(float dm) {
+  vec4 a = exp(-uKdA * dm); vec3 b = exp(-uKdB * dm);
+  return vec3(${glDot(0)}, ${glDot(1)}, ${glDot(2)});
+}
+vec3 uwAdapt(vec3 c) { float l = dot(c, vec3(0.2126, 0.7152, 0.0722)); return c * pow(max(l, 0.02), -uAdapt); }
+vec2 uwHash(vec2 p) { p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3))); return fract(sin(p) * 43758.5453); }
+float uwVoro(vec2 x, float t) {
+  vec2 n = floor(x), f = fract(x); float d1 = 8.0, d2 = 8.0;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec2 g = vec2(float(i), float(j)); vec2 o = uwHash(n + g);
+    o = 0.5 + 0.42 * sin(t * 0.7 + 6.2831 * o);
+    float d = length(g + o - f);
+    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+  }
+  return d2 - d1;
+}
+float uwCaustic(vec2 p, float t) {
+  float e1 = uwVoro(p, t), e2 = uwVoro(p * 1.63 + 7.3, t * 1.27);
+  return pow(1.0 - smoothstep(0.0, 0.2, e1), 3.0) + 0.55 * pow(1.0 - smoothstep(0.0, 0.16, e2), 3.0);
+}`;
+
+/* Make a standard material behave as if it sits in the water column:
+   its light is filtered by the water above it, plus caustics on up-facing surfaces. */
+function uwify(mat, caustics = true) {
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, UW);
+    sh.vertexShader = 'varying vec3 vUwPos;\n' + sh.vertexShader.replace('#include <worldpos_vertex>',
+      '#include <worldpos_vertex>\nvUwPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = UW_GLSL + '\nvarying vec3 vUwPos;\n' + sh.fragmentShader.replace('#include <tonemapping_fragment>', `
+      if (uOn > 0.5 && vUwPos.y < uSurfY) {
+        float du = uSurfY - vUwPos.y;
+        vec3 E = uwAdapt(uwDown(uDepthOffset + du * uMpu));
+        ${caustics ? `vec3 wN = inverseTransformDirection(normal, viewMatrix);
+        float up = clamp(wN.y, 0.0, 1.0);
+        vec2 s = vUwPos.xz - uSunW.xz * (du / max(-uSunW.y, 0.25));
+        float cs = uwCaustic(s * uCausScale, uTime);
+        E *= 1.0 + uCaust * up * exp(-du * uMpu * 0.07) * (cs * 1.7 - 0.35);` : ''}
+        gl_FragColor.rgb *= E;
+      }
+      #include <tonemapping_fragment>`);
+  };
+  mat.customProgramCacheKey = () => 'uw' + (caustics ? 1 : 0);
+  return mat;
+}
+
+/* ---------- water pass ---------- */
+const post = { scene: new THREE.Scene(), cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), rt: null };
+post.mat = new THREE.ShaderMaterial({
+  uniforms: Object.assign({ tColor: { value: null }, tDepth: { value: null }, uInvViewProj: { value: new THREE.Matrix4() }, uCamPos: { value: V(0, 0, 0) } }, UW),
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: UW_GLSL + `
+uniform sampler2D tColor; uniform sampler2D tDepth; uniform mat4 uInvViewProj; uniform vec3 uCamPos;
+uniform vec3 uSigT; uniform vec3 uSigS; uniform vec3 uSunCol; uniform vec3 uSkyCol; uniform float uCosT;
+uniform float uShaft; uniform float uShaftScale; uniform float uShaftFade; uniform float uExposure; uniform float uVignette;
+varying vec2 vUv;
+vec2 boxHit(vec3 ro, vec3 rd) {
+  vec3 inv = 1.0 / rd; vec3 a = (uBoxMin - ro) * inv, b = (uBoxMax - ro) * inv;
+  vec3 lo = min(a, b), hi = max(a, b);
+  return vec2(max(max(lo.x, lo.y), lo.z), min(min(hi.x, hi.y), hi.z));
+}
+float shaftPat(vec2 p, float t) {
+  float a = sin(p.x * 0.9 + t * 0.33 + sin(p.y * 0.7 + t * 0.21) * 1.5);
+  float b = sin(p.y * 1.1 - t * 0.29 + sin(p.x * 0.63 - t * 0.23) * 1.3);
+  float c = sin((p.x + p.y) * 0.53 + t * 0.19);
+  float v = (a + b + 0.6 * c) / 2.6;
+  return 0.3 + 3.6 * pow(0.5 + 0.5 * v, 3.0);
+}
+vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+vec3 toSRGB(vec3 c) { return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+void main() {
+  vec3 col = texture2D(tColor, vUv).rgb;
+  float z = texture2D(tDepth, vUv).x;
+  vec4 wp = uInvViewProj * vec4(vUv * 2.0 - 1.0, z * 2.0 - 1.0, 1.0);
+  wp.xyz /= wp.w;
+  float jit = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  if (uOn > 0.5) {
+    vec3 ro = uCamPos, rd = normalize(wp.xyz - ro);
+    float tScene = z < 0.99999 ? length(wp.xyz - ro) : 1e5;
+    vec2 tb = boxHit(ro, rd);
+    float t0 = max(tb.x, 0.0), t1 = min(tb.y, tScene);
+    if (t1 > t0) {
+      const int N = 40;
+      float dt = (t1 - t0) / float(N);
+      float ct = -dot(rd, uSunW), g = 0.7;
+      float phase = 0.5 + 0.5 * (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * ct, 1.5);
+      vec3 T = vec3(1.0), L = vec3(0.0), stepT = exp(-uSigT * dt);
+      for (int i = 0; i < N; i++) {
+        vec3 p = ro + rd * (t0 + (float(i) + jit) * dt);
+        float du = max(uSurfY - p.y, 0.0), dm = uDepthOffset + du * uMpu;
+        vec2 s = p.xz - uSunW.xz * (du / max(-uSunW.y, 0.25));
+        float sh = mix(1.0, shaftPat(s * uShaftScale, uTime), uShaft * exp(-dm * uShaftFade));
+        vec3 Li = uSkyCol * uwAdapt(uwDown(dm)) + uSunCol * uwAdapt(uwDown(dm / uCosT)) * sh * phase;
+        L += T * uSigS * Li * dt;
+        T *= stepT;
+      }
+      col = col * T + L;
+    }
+  }
+  col = aces(col * uExposure);
+  vec2 q = vUv - 0.5;
+  col *= 1.0 - dot(q, q) * uVignette;
+  gl_FragColor = vec4(toSRGB(col) + (jit - 0.5) / 255.0, 1.0);
+  gl_FragDepthEXT = z;
+}`,
+  depthTest: true, depthWrite: true, depthFunc: THREE.AlwaysDepth
+});
+post.mat.extensions.fragDepth = true;
+const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post.mat);
+postQuad.frustumCulled = false;
+post.scene.add(postQuad);
+function ensureTargets(w, h) {
+  const W = Math.max(1, Math.floor(w * PR)), H = Math.max(1, Math.floor(h * PR));
+  if (post.rt && post.rt.width === W && post.rt.height === H) return;
+  if (post.rt) { post.rt.depthTexture.dispose(); post.rt.dispose(); }
+  const rt = new THREE.WebGLRenderTarget(W, H, { type: HDR ? THREE.HalfFloatType : THREE.UnsignedByteType, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true });
+  rt.depthTexture = new THREE.DepthTexture(W, H);
+  rt.depthTexture.type = THREE.UnsignedIntType;
+  post.rt = rt;
+  post.mat.uniforms.tColor.value = rt.texture;
+  post.mat.uniforms.tDepth.value = rt.depthTexture;
+}
+function renderFrame() {
+  renderer.setRenderTarget(post.rt);
+  renderer.setClearColor(0x000000, 1);
+  renderer.render(world, cam);
+  post.mat.uniforms.uInvViewProj.value.multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse);
+  post.mat.uniforms.uCamPos.value.copy(cam.position);
+  renderer.setRenderTarget(null);
+  renderer.render(post.scene, post.cam);
+  renderer.autoClear = false;
+  renderer.render(overlay, cam);
+  renderer.autoClear = true;
+}
+
+/* ---------- sky / studio backdrop, also used to light reflections ---------- */
+const SKY = {
+  uTop: { value: new THREE.Color() }, uHor: { value: new THREE.Color() }, uBot: { value: new THREE.Color() },
+  uSunDir: { value: V(0, 1, 0) }, uSunCol: { value: V(0, 0, 0) }, uSunSize: { value: 900 }, uBoxes: { value: 0 }
+};
+const skyMat = () => new THREE.ShaderMaterial({
+  uniforms: SKY, side: THREE.BackSide, depthWrite: false,
+  vertexShader: 'varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform vec3 uTop, uHor, uBot, uSunDir, uSunCol; uniform float uSunSize, uBoxes; varying vec3 vDir;
+  void main() {
+    vec3 d = normalize(vDir); float h = d.y;
+    vec3 c = h > 0.0 ? mix(uHor, uTop, pow(clamp(h, 0.0, 1.0), 0.5)) : mix(uHor, uBot, pow(clamp(-h, 0.0, 1.0), 0.3));
+    float s = max(dot(d, uSunDir), 0.0);
+    c += uSunCol * (pow(s, uSunSize) * 30.0 + pow(s, 24.0) * 0.5 + pow(s, 4.0) * 0.12);
+    if (uBoxes > 0.5) {
+      c += vec3(2.6) * smoothstep(0.955, 0.965, dot(d, normalize(vec3(-0.45, 0.75, 0.5))));
+      c += vec3(1.3, 1.25, 1.2) * smoothstep(0.93, 0.945, dot(d, normalize(vec3(0.7, 0.45, -0.4))));
+      c += vec3(0.5, 0.7, 0.8) * smoothstep(0.9, 0.92, dot(d, normalize(vec3(0.1, 0.25, 0.95))));
+    }
+    gl_FragColor = vec4(c, 1.0);
+    #include <encodings_fragment>
+  }`
+});
+const backdrop = new THREE.Mesh(new THREE.SphereGeometry(500, 48, 24), skyMat());
+backdrop.frustumCulled = false;
+world.add(backdrop);
+const envScene = new THREE.Scene();
+envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 48, 24), skyMat()));
+const pmrem = new THREE.PMREMGenerator(renderer);
+let envRT = null, envDirty = true, envAt = 0;
+let skyKey = '';
+function setSky(o) {
+  const k = JSON.stringify(o); if (k === skyKey) return; skyKey = k;
+  SKY.uTop.value.copy(lin(o.top)); SKY.uHor.value.copy(lin(o.hor)); SKY.uBot.value.copy(lin(o.bot));
+  SKY.uSunDir.value.copy(o.sunDir || V(0, 1, 0)).normalize();
+  SKY.uSunCol.value.set(...(o.sunCol || [0, 0, 0]));
+  SKY.uBoxes.value = o.boxes ? 1 : 0;
+  envDirty = true;
+}
+function rebuildEnv() {
+  const rt = pmrem.fromScene(envScene, 0.03);
+  world.environment = overlay.environment = rt.texture;
+  if (envRT) envRT.dispose();
+  envRT = rt; envDirty = false; envAt = performance.now();
+}
+function setWater(o) {
+  UW.uOn.value = o ? 1 : 0;
+  if (!o) return;
+  UW.uBoxMin.value.copy(o.min); UW.uBoxMax.value.copy(o.max);
+  UW.uSurfY.value = o.surfY; UW.uMpu.value = o.mpu; UW.uDepthOffset.value = o.depthOffset || 0;
+  UW.uKdA.value.set(o.kd[0], o.kd[1], o.kd[2], o.kd[3]); UW.uKdB.value.set(o.kd[4], o.kd[5], o.kd[6]);
+  UW.uAdapt.value = o.adapt;
+  UW.uSigT.value.set(...o.sigT); UW.uSigS.value.set(...o.sigS);
+  UW.uSunW.value.copy(o.sunW).normalize(); UW.uCosT.value = Math.max(0.3, -UW.uSunW.value.y);
+  UW.uSunCol.value.set(...o.sunCol); UW.uSkyCol.value.set(...o.skyCol);
+  UW.uShaft.value = o.shaft; UW.uShaftScale.value = o.shaftScale; UW.uShaftFade.value = o.shaftFade;
+  UW.uCaust.value = o.caust; UW.uCausScale.value = o.causScale;
+}
+
+/* ---------- orbit controls (small, dependency-free) ---------- */
+const orb = { t: V(0, 0, 0), r: 24, az: 0, el: 0.2, goal: null };
+function applyOrbit() {
+  cam.position.set(
+    orb.t.x + orb.r * Math.cos(orb.el) * Math.sin(orb.az),
+    orb.t.y + orb.r * Math.sin(orb.el),
+    orb.t.z + orb.r * Math.cos(orb.el) * Math.cos(orb.az));
+  cam.lookAt(orb.t);
+}
+function goTo(v, instant) {
+  const g = { t: v.t.clone(), r: v.r, az: v.az, el: v.el };
+  if (instant || reduceMotion) { Object.assign(orb, g, { t: g.t }); orb.goal = null; }
+  else orb.goal = g;
+}
+const pointers = new Map();
+let pinchD = 0;
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2 }); orb.goal = null; });
+canvas.addEventListener('pointerup', e => { pointers.delete(e.pointerId); pinchD = 0; });
+canvas.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); pinchD = 0; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinchD) orb.r = clamp(orb.r * pinchD / d, 2, 160);
+    pinchD = d; return;
+  }
+  if (p.pan) {
+    const right = V(0, 0, 0).setFromMatrixColumn(cam.matrix, 0);
+    const up = V(0, 0, 0).setFromMatrixColumn(cam.matrix, 1);
+    const k = orb.r * 0.0016;
+    orb.t.addScaledVector(right, -dx * k).addScaledVector(up, dy * k);
+  } else {
+    orb.az -= dx * 0.006;
+    if (orb.azLim) orb.az = clamp(orb.az, -orb.azLim, orb.azLim);
+    orb.el = clamp(orb.el + dy * 0.006, -1.45, 1.45);
+  }
+});
+canvas.addEventListener('wheel', e => { e.preventDefault(); orb.goal = null; orb.r = clamp(orb.r * Math.exp(e.deltaY * 0.0012), 2, 160); }, { passive: false });
+
+/* ---------- drawing helpers ---------- */
+const UNIT_CYL = new THREE.CylinderGeometry(1, 1, 1, 8, 1, true);
+const UNIT_SPH = new THREE.SphereGeometry(1, 16, 12);
+const matCache = new Map();
+function basicMat(color, op = 1) {
+  const key = color + '|' + op;
+  if (!matCache.has(key)) matCache.set(key, new THREE.MeshBasicMaterial({ color: lin(color), transparent: op < 1, opacity: op, depthWrite: op >= 1 }));
+  return matCache.get(key);
+}
+function seg(g, a, b, color, r = 0.02, op = 1) {
+  const d = b.clone().sub(a), L = d.length(); if (L < 1e-5) return;
+  const m = new THREE.Mesh(UNIT_CYL, basicMat(color, op));
+  m.position.copy(a).addScaledVector(d, 0.5);
+  m.scale.set(r, L, r);
+  m.quaternion.setFromUnitVectors(YAXIS, d.normalize());
+  g.add(m);
+}
+function dashed(g, a, b, color, r = 0.015, op = 0.7, dash = 0.28, gap = 0.2) {
+  const d = b.clone().sub(a), L = d.length(); if (L < 1e-5) return;
+  const u = d.clone().divideScalar(L);
+  for (let s = 0; s < L; s += dash + gap) seg(g, a.clone().addScaledVector(u, s), a.clone().addScaledVector(u, Math.min(L, s + dash)), color, r, op);
+}
+function dot(g, p, color, r = 0.06, op = 1) {
+  const m = new THREE.Mesh(UNIT_SPH, basicMat(color, op));
+  m.position.copy(p); m.scale.setScalar(r); g.add(m); return m;
+}
+function clearGroup(g) {
+  for (let i = g.children.length - 1; i >= 0; i--) {
+    const c = g.children[i];
+    g.remove(c);
+    if (c.userData.own) { c.geometry.dispose(); if (c.material.map) c.material.map.dispose(); c.material.dispose(); }
+    if (c.children && c.children.length) clearGroup(c);
+  }
+}
+function disposeGroup(g) {
+  g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(m => m.dispose()); });
+  while (g.children.length) g.remove(g.children[0]);
+}
+function own(mesh) { mesh.userData.own = true; return mesh; }
+function glassMat(op = 0.22, color = '#d6eef5') {
+  return new THREE.MeshPhysicalMaterial({ color: lin(color), transparent: true, opacity: op, roughness: 0.02, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02, reflectivity: 1, envMapIntensity: 2.4, side: THREE.DoubleSide, depthWrite: false });
+}
+function stdMat(color, rough = 0.5, metal = 0, extra = {}) {
+  return new THREE.MeshStandardMaterial(Object.assign({ color: lin(color), roughness: rough, metalness: metal }, extra));
+}
+function shadowy(o, cast = true, receive = true) { o.traverse(m => { if (m.isMesh) { m.castShadow = cast; m.receiveShadow = receive; } }); return o; }
+/* canvas texture helper; draw(ctx, w, h) paints it */
+function canvasTex(w, h, draw, srgb = true, repeat) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.encoding = THREE.sRGBEncoding;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
+  t.anisotropy = 8;
+  return t;
+}
+let seedN = 1;
+const srand = s => { seedN = s; };
+const rnd = () => (seedN = (seedN * 16807) % 2147483647) / 2147483647;
+/* tileable value noise for sand and rock textures */
+function noiseField(w, h, cell, s) {
+  srand(s);
+  const gw = Math.ceil(w / cell), gh = Math.ceil(h / cell), g = [];
+  for (let i = 0; i < gw * gh; i++) g.push(rnd());
+  const at = (x, y) => g[((y % gh) + gh) % gh * gw + ((x % gw) + gw) % gw];
+  return (x, y) => {
+    const fx = x / cell, fy = y / cell, x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const tx = fx - x0, ty = fy - y0, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+    const a = at(x0, y0), b = at(x0 + 1, y0), c = at(x0, y0 + 1), d = at(x0 + 1, y0 + 1);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  };
+}
+/* sand: rippled height field → colour map + normal map */
+const SAND = (() => {
+  const N = 512, n1 = noiseField(N, N, 64, 3), n2 = noiseField(N, N, 16, 5), n3 = noiseField(N, N, 4, 9);
+  const hgt = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const warp = n1(x, y) * 40;
+    const rip = Math.sin((x + y * 0.375 + warp) * 2 * Math.PI / 64);
+    hgt[y * N + x] = 0.55 * (0.5 + 0.5 * rip) ** 1.6 + 0.3 * n2(x, y) + 0.15 * n3(x, y);
+  }
+  const H = (x, y) => hgt[((y + N) % N) * N + ((x + N) % N)];
+  const map = canvasTex(N, N, (ctx) => {
+    const img = ctx.createImageData(N, N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const h = H(x, y), speck = n3(x * 3, y * 3) > 0.82 ? 0.75 : 1;
+      const k = (0.78 + 0.3 * h) * speck, i = (y * N + x) * 4;
+      img.data[i] = 206 * k; img.data[i + 1] = 188 * k; img.data[i + 2] = 150 * k; img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }, true, [1, 1]);
+  const normal = canvasTex(N, N, (ctx) => {
+    const img = ctx.createImageData(N, N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const dx = (H(x + 1, y) - H(x - 1, y)) * 3, dy = (H(x, y + 1) - H(x, y - 1)) * 3;
+      const l = Math.hypot(dx, dy, 1), i = (y * N + x) * 4;
+      img.data[i] = (-dx / l * 0.5 + 0.5) * 255; img.data[i + 1] = (dy / l * 0.5 + 0.5) * 255; img.data[i + 2] = (1 / l * 0.5 + 0.5) * 255; img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }, false, [1, 1]);
+  return { map, normal };
+})();
+function sandMat(repeat) {
+  const m = stdMat('#c9c2b4', 0.95, 0, { map: SAND.map.clone(), normalMap: SAND.normal.clone(), normalScale: new THREE.Vector2(1.2, 1.2) });
+  [m.map, m.normalMap].forEach(t => { t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat, repeat); });
+  return uwify(m, true);
+}
+/* lumpy rock */
+function makeRock(size, seed, color = '#6d6a60') {
+  const g = new THREE.IcosahedronGeometry(1, 4), p = g.attributes.position;
+  const nA = noiseField(64, 64, 8, seed), nB = noiseField(64, 64, 4, seed + 1);
+  for (let i = 0; i < p.count; i++) {
+    const v = V(p.getX(i), p.getY(i), p.getZ(i)).normalize();
+    const u = (Math.atan2(v.z, v.x) / (2 * Math.PI) + 0.5) * 64, w = (v.y * 0.5 + 0.5) * 64;
+    const r = 1 + 0.35 * (nA(u, w) - 0.5) + 0.12 * (nB(u * 2, w * 2) - 0.5);
+    p.setXYZ(i, v.x * r * 1.25, v.y * r * 0.7, v.z * r);
+  }
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, uwify(stdMat(color, 0.92, 0, { flatShading: false }), true));
+  m.scale.setScalar(size);
+  return shadowy(m);
+}
+
+/* fish outline, unit length, nose at +x */
+function fishShape() {
+  const s = new THREE.Shape();
+  s.moveTo(0.5, 0);
+  s.bezierCurveTo(0.42, 0.2, 0.1, 0.3, -0.18, 0.2);
+  s.quadraticCurveTo(-0.3, 0.1, -0.33, 0.03);
+  s.lineTo(-0.5, 0.2);
+  s.lineTo(-0.44, 0);
+  s.lineTo(-0.5, -0.2);
+  s.lineTo(-0.33, -0.03);
+  s.quadraticCurveTo(-0.3, -0.1, -0.18, -0.2);
+  s.bezierCurveTo(0.1, -0.3, 0.42, -0.2, 0.5, 0);
+  return s;
+}
+const FISH_PTS = fishShape().getPoints(10);
+/* 3D fish: tapered, laterally compressed body with countershading, forked tail and fins */
+const fishP = t => Math.pow(Math.max(Math.sin(Math.PI * Math.pow(clamp(t, 0, 1), 1.36)), 0), 0.62);
+function fishBodyGeo(back, belly) {
+  const g = new THREE.SphereGeometry(0.5, 56, 28), p = g.attributes.position;
+  const col = new Float32Array(p.count * 3), cb = lin(back), cl = lin(belly);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const t = y + 0.5, rho = Math.hypot(x, z) || 1e-6;
+    const cx = x / rho, cz = z / rho, P = fishP(t);
+    const H = 0.34 * P, W = 0.14 * P * (0.6 + 0.4 * t);
+    p.setXYZ(i, t - 0.5, cx * H, cz * W);
+    const m = THREE.MathUtils.smoothstep(cx, -0.45, 0.5);
+    col[i * 3] = cl.r + (cb.r - cl.r) * m; col[i * 3 + 1] = cl.g + (cb.g - cl.g) * m; col[i * 3 + 2] = cl.b + (cb.b - cl.b) * m;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  return g;
+}
+const finGeo = (build, depth = 0.012) => {
+  const s = new THREE.Shape(); build(s);
+  const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1, curveSegments: 12 });
+  g.translate(0, 0, -depth / 2); return g;
+};
+const FIN = {
+  tail: finGeo(s => { s.moveTo(0.02, 0); s.quadraticCurveTo(-0.09, 0.08, -0.25, 0.25); s.quadraticCurveTo(-0.17, 0.03, -0.19, 0); s.quadraticCurveTo(-0.17, -0.03, -0.25, -0.25); s.quadraticCurveTo(-0.09, -0.08, 0.02, 0); }),
+  dorsal: finGeo(s => { s.moveTo(-0.2, 0.2); s.lineTo(0.16, 0.28); s.quadraticCurveTo(0.0, 0.33, -0.12, 0.46); s.quadraticCurveTo(-0.15, 0.32, -0.2, 0.2); }),
+  anal: finGeo(s => { s.moveTo(-0.26, -0.13); s.lineTo(-0.04, -0.2); s.quadraticCurveTo(-0.14, -0.26, -0.3, -0.3); s.quadraticCurveTo(-0.27, -0.2, -0.26, -0.13); }),
+  pec: finGeo(s => { s.moveTo(0, 0); s.quadraticCurveTo(-0.06, 0.05, -0.16, 0.02); s.quadraticCurveTo(-0.08, -0.04, 0, 0); }, 0.008)
+};
+const WAG = [];
+function makeFish(o) {
+  const { back, belly = '#f4efe2', opacity = 1, water = false } = o;
+  const grp = new THREE.Group();
+  const tr = opacity < 1 ? { transparent: true, opacity, depthWrite: false } : {};
+  const wrap = m => water ? uwify(m, false) : m;
+  const bodyMat = wrap(new THREE.MeshPhysicalMaterial(Object.assign({ vertexColors: true, roughness: 0.5, metalness: 0.02, clearcoat: 0.2, clearcoatRoughness: 0.35, envMapIntensity: 0.45 }, tr)));
+  const finMat = wrap(stdMat(back, 0.6, 0.02, Object.assign({ transparent: true, opacity: 0.93 * opacity, side: THREE.DoubleSide, depthWrite: false })));
+  grp.add(new THREE.Mesh(fishBodyGeo(back, belly), bodyMat));
+  const pivot = new THREE.Group(); pivot.position.x = -0.45; grp.add(pivot);
+  pivot.add(new THREE.Mesh(FIN.tail, finMat));
+  grp.add(new THREE.Mesh(FIN.dorsal, finMat), new THREE.Mesh(FIN.anal, finMat));
+  [1, -1].forEach(sz => {
+    const pec = new THREE.Mesh(FIN.pec, finMat); pec.position.set(0.18, -0.06, 0.09 * sz); pec.rotation.set(0, -0.5 * sz, -0.35); grp.add(pec);
+    const eye = new THREE.Mesh(UNIT_SPH, wrap(stdMat('#e2cf8e', 0.3, 0.1, tr))); eye.scale.setScalar(0.038); eye.position.set(0.33, 0.06, 0.088 * sz); grp.add(eye);
+    const pupil = new THREE.Mesh(UNIT_SPH, wrap(stdMat('#050607', 0.08, 0, tr))); pupil.scale.setScalar(0.024); pupil.position.set(0.345, 0.062, 0.113 * sz); grp.add(pupil);
+  });
+  grp.userData.bodyMat = bodyMat;
+  WAG.push({ pivot, phase: Math.random() * 6.28, speed: 5 + Math.random() * 2, amp: o.wag === undefined ? 0.28 : o.wag });
+  return opacity < 1 ? grp : shadowy(grp);
+}
+function drawFish2D(ctx, cx, cy, len, flip = 1) {
+  ctx.beginPath();
+  FISH_PTS.forEach((p, i) => { const x = cx + p.x * len * flip, y = cy - p.y * len; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  ctx.closePath();
+}
+
+/* vector refraction; n points back toward the incident side */
+function refract(d, n, n1, n2) {
+  const eta = n1 / n2, cosi = -n.dot(d), k = 1 - eta * eta * (1 - cosi * cosi);
+  if (k < 0) return null;
+  return d.clone().multiplyScalar(eta).add(n.clone().multiplyScalar(eta * cosi - Math.sqrt(k))).normalize();
+}
+function golden(fn, a, b) {
+  const g = 0.6180339887;
+  let c = b - g * (b - a), d = a + g * (b - a), fc = fn(c), fd = fn(d);
+  for (let i = 0; i < 70; i++) {
+    if (fc < fd) { b = d; d = c; fd = fc; c = b - g * (b - a); fc = fn(c); }
+    else { a = c; c = d; fc = fd; d = a + g * (b - a); fd = fn(d); }
+  }
+  return (a + b) / 2;
+}
+
+/* ---------- labels ---------- */
+const LABELS = [];
+function mkLabel(mod, text, color) {
+  const el = document.createElement('div');
+  el.className = 'lbl'; el.textContent = text;
+  if (color) { el.style.borderColor = color; el.style.color = color; }
+  labelsEl.appendChild(el);
+  const L = { el, pos: V(0, 0, 0), show: true, mod, lift: 1 };
+  LABELS.push(L); return L;
+}
+const _pv = V(0, 0, 0);
+function placeLabels(w, h) {
+  for (const L of LABELS) {
+    if (L.mod !== active || !L.show) { L.el.hidden = true; continue; }
+    _pv.copy(L.pos).project(cam);
+    if (_pv.z > 1 || Math.abs(_pv.x) > 1.3 || Math.abs(_pv.y) > 1.3) { L.el.hidden = true; continue; }
+    L.el.hidden = false;
+    const x = (_pv.x + 1) / 2 * w, y = (1 - _pv.y) / 2 * h;
+    L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, ${L.lift > 0 ? '-135%' : '35%'})`;
+  }
+}
+
+/* ---------- panel builders ---------- */
+const panel = document.getElementById('panel');
+function el(tag, attrs = {}, html = '') {
+  const e = document.createElement(tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (html) e.innerHTML = html;
+  return e;
+}
+function slider(parent, o, onchange) {
+  const w = el('div', { class: 'ctrl' });
+  w.innerHTML = `<label for="${o.id}">${o.label}</label><output id="${o.id}-o"></output>
+    <input type="range" id="${o.id}" min="${o.min}" max="${o.max}" step="${o.step}" value="${o.value}">`;
+  parent.appendChild(w);
+  const inp = w.querySelector('input'), out = w.querySelector('output');
+  const fire = () => { const v = parseFloat(inp.value); out.textContent = o.fmt(v); onchange(v); };
+  inp.addEventListener('input', fire);
+  out.textContent = o.fmt(o.value);
+  return inp;
+}
+function segmented(parent, o, onchange) {
+  const w = el('div', { class: 'ctrl' });
+  w.innerHTML = `<span class="clabel" id="${o.id}-l">${o.label}</span>`;
+  const s = el('div', { class: 'seg', role: 'group', 'aria-labelledby': o.id + '-l' });
+  o.options.forEach(([val, txt]) => {
+    const b = el('button', { type: 'button', id: `${o.id}-${val}`, 'aria-pressed': String(val === o.value) }, txt);
+    b.addEventListener('click', () => { s.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); onchange(val); });
+    s.appendChild(b);
+  });
+  w.appendChild(s); parent.appendChild(w);
+}
+function toggle(parent, o, onchange) {
+  const w = el('label', { class: 'tog', for: o.id });
+  w.innerHTML = `<input type="checkbox" id="${o.id}" ${o.value ? 'checked' : ''}> ${o.label}`;
+  w.querySelector('input').addEventListener('change', e => onchange(e.target.checked));
+  parent.appendChild(w);
+}
+function modShell(i, title, lede) {
+  const m = el('div', { class: 'mod', id: 'mod-' + i, role: 'tabpanel', 'aria-labelledby': 'tab-' + i });
+  m.appendChild(el('div', {}, `<h2>${title}</h2><p class="lede">${lede}</p>`));
+  panel.appendChild(m);
+  return m;
+}
+function groupBox(parent, eyebrow) {
+  const g = el('div', { class: 'group' });
+  if (eyebrow) g.appendChild(el('p', { class: 'eyebrow' }, eyebrow));
+  parent.appendChild(g); return g;
+}
+function insetBox(parent, eyebrow, w, h, cap) {
+  const box = el('div', { class: 'inset' });
+  box.appendChild(el('p', { class: 'eyebrow' }, eyebrow));
+  const c = el('canvas', { width: w * 2, height: h * 2, role: 'img', 'aria-label': eyebrow });
+  box.appendChild(c);
+  const capEl = el('p', { class: 'cap' }, cap || '');
+  box.appendChild(capEl);
+  parent.appendChild(box);
+  const ctx = c.getContext('2d'); ctx.scale(2, 2);
+  return { ctx, w, h, capEl };
+}
+const fmt = (v, d = 1) => Number(v).toFixed(d);
+const fmtDist = m => m >= 1 ? fmt(m, 2) + ' m' : Math.round(m * 100) + ' cm';
+
+/* =====================================================================
+   MODULE 1 — FOCUS IN AIR (thin lens)
+   ===================================================================== */
+const FSTOPS = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
+const M1 = {
+  group: new THREE.Group(), dyn: new THREE.Group(),
+  st: { f: 50, Ni: 2, focus: 1.2, show: 'all' },
+  subjects: [
+    { key: 'near', name: 'Near fish', d: 0.5, y: 0.7, color: '#FF7A59' },
+    { key: 'mid', name: 'Middle fish', d: 1.2, y: -0.05, color: '#F2D15A' },
+    { key: 'far', name: 'Far fish', d: 3.0, y: -0.78, color: '#6FC8F5' }
+  ],
+  scale: 'Not to scale · object distances compressed, image side stretched ×12 so millimetre focus shifts are visible'
+};
+const xObj = d => -(2.5 + 9 * Math.log(d / 0.3) / Math.log(5 / 0.3));
+/* optical breadboard: black anodised plate with M6 holes on a 25 mm grid */
+const BREADBOARD = canvasTex(512, 512, (ctx, w, h) => {
+  ctx.fillStyle = '#1b1f22'; ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.025})`; ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); }
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const cx = x * 64 + 32, cy = y * 64 + 32;
+    const g = ctx.createRadialGradient(cx, cy - 1, 1, cx, cy, 8);
+    g.addColorStop(0, '#020303'); g.addColorStop(0.75, '#07090a'); g.addColorStop(1, '#2a3035');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.fill();
+  }
+}, true, [11, 5]);
+function opticPost(g, x, yTop, base = -2.42) {
+  const steel = stdMat('#c9ced1', 0.28, 1);
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, yTop - base - 0.55, 20), steel);
+  rod.position.set(x, (yTop + base + 0.55) / 2, 0); g.add(shadowy(rod));
+  const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.55, 24), stdMat('#15191b', 0.45, 0.6));
+  holder.position.set(x, base + 0.42, 0); g.add(shadowy(holder));
+  const carrier = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.18, 0.9), stdMat('#9aa3a8', 0.35, 0.85));
+  carrier.position.set(x, base + 0.09, 0); g.add(shadowy(carrier));
+}
+(function buildM1() {
+  const g = M1.group; world.add(g);
+  M1.ov = new THREE.Group(); overlay.add(M1.ov); M1.ov.add(M1.dyn);
+  const table = new THREE.Mesh(new THREE.BoxGeometry(44, 0.6, 20), [stdMat('#15181a', 0.7, 0.3), stdMat('#15181a', 0.7, 0.3), new THREE.MeshStandardMaterial({ map: BREADBOARD, roughness: 0.55, metalness: 0.35 }), stdMat('#15181a', 0.7, 0.3), stdMat('#202528', 0.6, 0.4), stdMat('#202528', 0.6, 0.4)]);
+  table.position.set(-1, -2.86, 0); g.add(shadowy(table, false, true));
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(26, 0.22, 0.6), stdMat('#aab2b6', 0.32, 0.9));
+  rail.position.set(-1, -2.45, 0); g.add(shadowy(rail));
+  const railGroove = new THREE.Mesh(new THREE.BoxGeometry(26, 0.06, 0.16), stdMat('#3a4145', 0.5, 0.8));
+  railGroove.position.set(-1, -2.33, 0); g.add(railGroove);
+  dashed(M1.ov, V(-13, 0, 0), V(12, 0, 0), '#8BA2A6', 0.008, 0.45, 0.3, 0.25);
+  // lens in a black anodised mount
+  const pts = []; const R = 1.75, t = 0.24;
+  for (let i = 0; i <= 24; i++) { const r = R * i / 24; pts.push(new THREE.Vector2(r, t * (1 - (r / R) ** 2))); }
+  for (let i = 24; i >= 0; i--) { const r = R * i / 24; pts.push(new THREE.Vector2(r, -t * (1 - (r / R) ** 2))); }
+  const lens = new THREE.Mesh(new THREE.LatheGeometry(pts, 96), glassMat(0.12));
+  lens.material.envMapIntensity = 1.1;
+  lens.rotation.z = Math.PI / 2; g.add(lens);
+  const ringMat = stdMat('#111416', 0.38, 0.55);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.86, 0.13, 20, 96), ringMat);
+  ring.rotation.y = Math.PI / 2; g.add(shadowy(ring));
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1.98, 1.98, 0.8, 72, 1, true), stdMat('#15191b', 0.42, 0.6, { side: THREE.DoubleSide }));
+  barrel.rotation.z = Math.PI / 2; barrel.position.x = 0.45; g.add(shadowy(barrel));
+  const knurl = new THREE.Mesh(new THREE.CylinderGeometry(2.03, 2.03, 0.28, 72, 1, true), stdMat('#2a2f33', 0.7, 0.5, { side: THREE.DoubleSide }));
+  knurl.rotation.z = Math.PI / 2; knurl.position.x = 0.62; g.add(knurl);
+  opticPost(g, 0.3, -1.9);
+  M1.diaphragm = new THREE.Mesh(new THREE.RingGeometry(0.5, 1.96, 96), stdMat('#0d0f10', 0.35, 0.7, { side: THREE.DoubleSide }));
+  M1.diaphragm.rotation.y = Math.PI / 2; M1.diaphragm.position.x = 0.32; g.add(M1.diaphragm);
+  // sensor chip on its own carrier
+  M1.sensor = new THREE.Group(); g.add(M1.sensor);
+  const pcb = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.2, 4.2), stdMat('#0f3a2c', 0.6, 0.1));
+  pcb.position.x = 0.12; M1.sensor.add(shadowy(pcb));
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.85, 3.85), stdMat('#c8a24a', 0.3, 1));
+  frame.position.x = 0.05; M1.sensor.add(frame);
+  const chip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.6, 3.6), new THREE.MeshPhysicalMaterial({ color: lin('#1a2330'), roughness: 0.12, metalness: 0.4, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.6 }));
+  M1.sensor.add(chip);
+  const sPost = new THREE.Group(); M1.sensor.add(sPost); opticPost(sPost, 0.12, -1.6);
+  // fish on posts
+  M1.subjects.forEach(s => {
+    const f = makeFish({ back: s.color, belly: '#f3efe6', wag: 0 }); const x = xObj(s.d);
+    f.scale.setScalar(1.25); f.position.set(x, s.y, 0); f.rotation.y = -0.35;
+    g.add(f); s.mesh = f;
+    opticPost(g, x, s.y - 0.18);
+    dot(M1.ov, V(x, s.y, 0), '#ffffff', 0.05);
+    s.label = mkLabel(0, `${s.name} · ${s.d} m`, s.color);
+    s.label.pos.set(x, s.y + 0.5, 0);
+  });
+  M1.lensLabel = mkLabel(0, 'Lens + aperture'); M1.lensLabel.pos.set(0, 2.25, 0);
+  M1.sensorLabel = mkLabel(0, 'Sensor');
+  M1.focalDot = dot(M1.ov, V(0, 0, 0), '#E3ECEA', 0.05);
+  M1.focalLabel = mkLabel(0, 'f (focus at ∞)', '#8BA2A6'); M1.focalLabel.lift = -1;
+})();
+M1.env = () => {
+  setSky({ top: '#3a474d', hor: '#1a2226', bot: '#07090a', boxes: true });
+  setLights({ sky: '#dfe9ee', ground: '#1a1d1f', hemi: 0.55, sunCol: '#fff4e6', sun: 2.6, pos: V(-6, 16, 10), target: V(-2, -2, 0), ext: 16 });
+  setWater(null);
+  UW.uExposure.value = 1.05; UW.uVignette.value = 0.55;
+};
+
+function m1Update() {
+  const s = M1.st, f = s.f, N = FSTOPS[s.Ni], D = f / N;
+  const dF = s.focus * 1000, dset = 1 / (1 / f - 1 / dF);
+  const F = 1.4 + 0.028 * f, S = 12;
+  const xs = F + S * (dset / f - 1);
+  const rAp = Math.max(0.035, 1.6 * D / 72);
+  M1.diaphragm.geometry.dispose();
+  M1.diaphragm.geometry = new THREE.RingGeometry(rAp, 1.95, 64);
+  M1.sensor.position.x = xs;
+  M1.sensorLabel.pos.set(xs, 1.75, 0);
+  M1.focalDot.position.set(F, 0, 0); M1.focalLabel.pos.set(F, -0.1, 0);
+  clearGroup(M1.dyn);
+  const g = M1.dyn;
+  const ring = [];
+  for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; ring.push(V(0, rAp * Math.cos(a), rAp * Math.sin(a))); }
+  const meri = [-1, -0.5, 0, 0.5, 1].map(k => V(0, k * rAp, 0));
+  M1.subjects.forEach(sub => {
+    const d = sub.d * 1000, di = 1 / (1 / f - 1 / d);
+    sub.di = di; sub.coc = D * Math.abs(di - dset) / di; sub.behind = di > dset;
+    const xo = xObj(sub.d), xi = F + S * (di / f - 1);
+    const P = V(xo, sub.y, 0), I = V(xi, -sub.y * xi / -xo, 0);
+    const shown = s.show === 'all' || s.show === sub.key;
+    sub.label.el.style.opacity = shown ? 1 : 0.45;
+    // blur disc on sensor
+    const C = I.clone().multiplyScalar(xs / xi);
+    const rd = Math.max(0.025, rAp * Math.abs(xs - xi) / xi);
+    const disc = own(new THREE.Mesh(new THREE.CircleGeometry(rd, 48), new THREE.MeshBasicMaterial({ color: sub.color, transparent: true, opacity: shown ? 0.75 : 0.3, side: THREE.DoubleSide, depthWrite: false })));
+    disc.rotation.y = Math.PI / 2; disc.position.set(xs - 0.04, C.y, 0); g.add(disc);
+    if (!shown) return;
+    const draw = (A, op, r) => {
+      seg(g, P, A, sub.color, r, op * 0.8);
+      const Sp = A.clone().add(I.clone().sub(A).multiplyScalar(xs / xi));
+      if (xs <= xi) { seg(g, A, Sp, sub.color, r, op); dashed(g, Sp, I, sub.color, r * 0.8, op * 0.4, 0.12, 0.1); }
+      else { seg(g, A, I, sub.color, r, op); seg(g, I, Sp, sub.color, r, op); }
+    };
+    meri.forEach(A => draw(A, 0.95, 0.014));
+    ring.forEach(A => draw(A, 0.35, 0.008));
+    dot(g, I, sub.color, 0.05);
+  });
+  m1Readouts(f, N, D, dF, dset);
+  m1Inset(f);
+}
+function cocPill(c) {
+  if (c < 0.03) return '<span class="pill good">sharp</span>';
+  if (c < 0.1) return '<span class="pill warn">soft</span>';
+  return '<span class="pill bad">blurred</span>';
+}
+function m1Readouts(f, N, D, dF, dset) {
+  const c0 = 0.03, H = f * f / (N * c0) + f;
+  const near = dF * (H - f) / (H + dF - 2 * f), far = dF < H ? dF * (H - f) / (H - dF) : Infinity;
+  const rows = [
+    ['Aperture diameter (f ÷ N)', fmt(D, 1) + ' mm'],
+    ['Lens-to-sensor distance', fmt(dset, 2) + ' mm'],
+    ['Depth of field', `${fmtDist(near / 1000)} – ${far === Infinity ? '∞' : fmtDist(far / 1000)}`]
+  ];
+  M1.subjects.forEach(s => rows.push([`<span class="sw" style="background:${s.color}"></span>${s.name} blur`, `${fmt(s.coc, 3)} mm${cocPill(s.coc)}`]));
+  M1.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  // talk track
+  const sharp = M1.subjects.filter(s => s.coc < 0.03).map(s => s.name.toLowerCase());
+  const worst = M1.subjects.reduce((a, b) => a.coc > b.coc ? a : b);
+  const shift = Math.abs(worst.di - dset);
+  M1.talkEl.innerHTML = `
+    <p>Every point on a subject sends a cone of light into the lens. The lens bends that cone so it converges again at one point behind the lens, at distance <b>d<sub>i</sub></b> given by <b>1/f = 1/d<sub>o</sub> + 1/d<sub>i</sub></b>. Focusing means moving the lens (drawn here as the sensor) until that point lands on the sensor.</p>
+    <p>Focused at <b>${fmtDist(dF / 1000)}</b>, the ${f} mm lens sits <b>${fmt(dset, 2)} mm</b> from the sensor. The ${worst.name.toLowerCase()} would come to a point <b>${fmt(shift, 2)} mm</b> ${worst.behind ? 'behind' : 'in front of'} the sensor, so each of its points spreads into a <b>${fmt(worst.coc, 2)} mm</b> blur disc${worst.coc > 0.03 ? `, ${fmt(worst.coc / 0.03, 0)}× the 0.03 mm we accept as sharp on a full-frame sensor` : ''}.</p>
+    <p>${sharp.length ? `Sharp right now: ${sharp.join(', ')}.` : 'Nothing is quite sharp right now.'} Stop down (a bigger f-number) and the cone narrows, so the same focus error makes a smaller disc: depth of field grows. At f/${N} it runs from <b>${fmtDist(near / 1000)}</b> to <b>${far === Infinity ? 'infinity' : fmtDist(far / 1000)}</b>.</p>`;
+}
+function m1Inset(f) {
+  const { ctx, w, h } = M1.inset;
+  const N = FSTOPS[M1.st.Ni];
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#16303a'); bg.addColorStop(1, '#0b1a20');
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+  const layout = { near: [-92, -42], mid: [8, 4], far: [96, 46] };
+  const pxPerMm = w / 36;
+  // draw far to near so the near fish overlaps
+  [...M1.subjects].reverse().forEach(s => {
+    const k = f / 50;
+    const cx = w / 2 + layout[s.key][0] * k, cy = h / 2 + layout[s.key][1] * k;
+    const len = Math.min(230, 1.5 * f / s.d);
+    const r = s.coc / 2 * pxPerMm;
+    const samples = r < 0.4 ? [[0, 0]] : Array.from({ length: 48 }, (_, i) => {
+      const rr = r * Math.sqrt((i + 0.5) / 48), a = i * 2.39996;
+      return [rr * Math.cos(a), rr * Math.sin(a)];
+    });
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = s.color;
+    ctx.globalAlpha = 1 / samples.length * 0.95;
+    samples.forEach(([ox, oy]) => { drawFish2D(ctx, cx + ox, cy + oy, len, -1); ctx.fill(); });
+  });
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(227,236,234,.8)';
+  ctx.font = '600 11px "JetBrains Mono", monospace';
+  ctx.fillText(`${f} mm · f/${N} · focus ${fmtDist(M1.st.focus)}`, 10, h - 10);
+}
+(function panelM1() {
+  const m = modShell(0, 'Why a camera must focus', 'A thin lens on an optical bench. Move the focus and watch where each fish’s cone of light comes to a point, and what that does to the photo.');
+  const g = groupBox(m, 'Controls');
+  const focusSl = slider(g, { id: 'm1-focus', label: 'Focus distance', min: 0, max: 1000, step: 1, value: 1000 * Math.log(1.2 / 0.3) / Math.log(5 / 0.3), fmt: v => fmtDist(0.3 * (5 / 0.3) ** (v / 1000)) }, v => { M1.st.focus = 0.3 * (5 / 0.3) ** (v / 1000); m1Update(); });
+  slider(g, { id: 'm1-ap', label: 'Aperture', min: 0, max: FSTOPS.length - 1, step: 1, value: M1.st.Ni, fmt: v => 'f/' + FSTOPS[v] }, v => { M1.st.Ni = v; m1Update(); });
+  slider(g, { id: 'm1-f', label: 'Focal length', min: 24, max: 105, step: 1, value: 50, fmt: v => v + ' mm' }, v => { M1.st.f = v; m1Update(); });
+  segmented(g, { id: 'm1-show', label: 'Show light rays from', value: 'all', options: [['all', 'All'], ['near', 'Near'], ['mid', 'Middle'], ['far', 'Far']] }, v => { M1.st.show = v; m1Update(); });
+  M1.inset = insetBox(m, 'What the sensor records', 360, 240, 'Each point of a fish is smeared into a disc the size of its blur circle on the sensor (full-frame, 36 mm wide).');
+  const r = el('dl', { class: 'readouts' }); m.appendChild(r); M1.readEl = r;
+  const t = el('div', { class: 'talk' }); t.appendChild(el('p', { class: 'eyebrow' }, 'Say it in class'));
+  M1.talkEl = el('div'); t.appendChild(M1.talkEl); m.appendChild(t);
+  M1.views = { side: { t: V(-3, 0, 0), r: 25, az: 0, el: 0.02 }, d3: { t: V(-2.5, -0.2, 0), r: 25, az: -0.72, el: 0.36 } };
+})();
+
+/* =====================================================================
+   MODULE 2 — BEHIND THE PORT (flat vs dome)
+   units: 1 = 10 cm; entrance pupil at the origin; camera looks toward -x
+   ===================================================================== */
+const N_WATER = 1.333, N_RED = 1.331, N_BLUE = 1.3395;
+const FLAT_X = -0.35, FISH_Y = 1.0;
+const M2 = {
+  group: new THREE.Group(), dyn: new THREE.Group(), ov: new THREE.Group(), wet: new THREE.Group(), wetOv: new THREE.Group(), housing: new THREE.Group(),
+  st: { port: 'flat', medium: 'water', dist: 1.0, fov: 94, R: 10, disp: false },
+  scale: '1 grid square = 10 cm · housing shown cut away · seagrass bed, 4 m deep'
+};
+renderer.localClippingEnabled = true;
+const CUT = [new THREE.Plane(V(0, 0, -1), 0)];
+/* soft round sprite for particles */
+const SPRITE = canvasTex(64, 64, (ctx) => {
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+}, false);
+/* a meadow of Zostera-like blades that sway in the swell */
+function makeSeagrass(count, area, len, seed) {
+  srand(seed);
+  const pos = [], nrm = [], bl = [], idx = [];
+  for (let b = 0; b < count; b++) {
+    const x = area.x0 + rnd() * (area.x1 - area.x0), z = area.z0 + rnd() * (area.z1 - area.z0);
+    const L = len * (0.55 + rnd() * 0.6), wdt = 0.07 + rnd() * 0.04, rot = rnd() * Math.PI, ph = rnd();
+    const lean = (rnd() - 0.5) * 0.5, cr = Math.cos(rot), sr = Math.sin(rot), base = pos.length / 3;
+    for (let k = 0; k <= 8; k++) {
+      const t = k / 8, y = area.y + t * L, off = lean * t * t * L;
+      [-1, 1].forEach(side => {
+        const lx = side * wdt / 2 * (1 - 0.6 * t);
+        pos.push(x + lx * cr + off, y, z + lx * sr); nrm.push(-sr, 0, cr); bl.push(ph, t);
+      });
+    }
+    for (let k = 0; k < 8; k++) { const a = base + k * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  g.setAttribute('aBlade', new THREE.Float32BufferAttribute(bl, 2));
+  g.setIndex(idx);
+  const m = uwify(stdMat('#4f7a2e', 0.6, 0, { side: THREE.DoubleSide }), true);
+  const base = m.onBeforeCompile;
+  m.onBeforeCompile = sh => {
+    base(sh);
+    sh.vertexShader = 'attribute vec2 aBlade;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float sway = sin(uTime * 1.1 + aBlade.x * 6.2831 + position.x * 0.15) * 0.35 + sin(uTime * 2.3 + aBlade.x * 12.0) * 0.08;
+      transformed.x += sway * aBlade.y * aBlade.y * 1.2;
+      transformed.z += cos(uTime * 0.9 + aBlade.x * 9.0) * 0.15 * aBlade.y * aBlade.y;`);
+  };
+  m.customProgramCacheKey = () => 'seagrass';
+  const mesh = new THREE.Mesh(g, m);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+(function buildM2() {
+  const g = M2.group; world.add(g); g.add(M2.housing, M2.wet);
+  overlay.add(M2.ov); M2.ov.add(M2.dyn, M2.wetOv);
+  const bed = new THREE.Mesh(new THREE.PlaneGeometry(56, 22, 80, 30), sandMat(9));
+  const bp = bed.geometry.attributes.position, nb = noiseField(128, 128, 16, 21);
+  for (let i = 0; i < bp.count; i++) bp.setZ(i, (nb(bp.getX(i) * 4 + 256, bp.getY(i) * 4 + 256) - 0.5) * 0.5);
+  bed.geometry.computeVertexNormals();
+  bed.rotation.x = -Math.PI / 2; bed.position.set(-20, -4.55, 0); g.add(shadowy(bed, false, true));
+  [[-16, -4.4, -5, 1.5, 3], [-30, -4.4, -6.5, 2.4, 5], [-8, -4.5, -7, 1.0, 7], [-38, -4.3, 4.5, 1.8, 11], [-24, -4.5, 6.5, 1.1, 13]]
+    .forEach(([x, y, z, sz, sd]) => { const r = makeRock(sz, sd, '#5f5c52'); r.position.set(x, y, z); r.rotation.y = sd; M2.wet.add(r); });
+  M2.wet.add(makeSeagrass(900, { x0: -44, x1: -2, z0: -9, z1: -1.5, y: -4.55 }, 3.2, 4));
+  M2.wet.add(makeSeagrass(260, { x0: -44, x1: -6, z0: 2.5, z1: 8.5, y: -4.55 }, 2.6, 8));
+  const grid = new THREE.GridHelper(56, 56, 0x6fb9c9, 0x4f8f9c); grid.scale.z = 22 / 56; grid.position.set(-20, -4.5, 0);
+  grid.material.transparent = true; grid.material.opacity = 0.22; grid.material.depthWrite = false; M2.ov.add(grid);
+  const surf = new THREE.Mesh(new THREE.PlaneGeometry(56, 22), new THREE.MeshStandardMaterial({ color: lin('#8fd6ea'), roughness: 0.08, metalness: 0, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
+  surf.rotation.x = -Math.PI / 2; surf.position.set(-20, 7, 0); M2.wetOv.add(surf);
+  srand(7);
+  const n = 700, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { pos[i * 3] = -44 + rnd() * 46; pos[i * 3 + 1] = -4.4 + rnd() * 11; pos[i * 3 + 2] = -9 + rnd() * 18; }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  M2.wetOv.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: lin('#cfe9ee'), map: SPRITE, size: 0.09, transparent: true, opacity: 0.55, depthWrite: false })));
+  // fish and its virtual image
+  M2.fish = makeFish({ back: '#E8B923', belly: '#FFF6D2', water: true }); M2.fish.scale.setScalar(4); M2.fish.rotation.y = Math.PI / 2 - 0.75; g.add(M2.fish);
+  M2.ghost = makeFish({ back: '#F2D15A', opacity: 0.3 }); M2.ghost.rotation.y = Math.PI / 2 - 0.75; M2.ov.add(M2.ghost);
+  M2.fishLabel = mkLabel(1, 'Real fish', '#F2D15A');
+  M2.ghostLabel = mkLabel(1, 'Where the camera sees it', '#F2B64E');
+  M2.portLabel = mkLabel(1, 'Flat port');
+  M2.fovLabel = mkLabel(1, '', '#43A9C6'); M2.fovLabel.lift = -1;
+  M2.airLabel = mkLabel(1, '', '#F2B64E');
+})();
+M2.env = () => {
+  const wet = M2.st.medium === 'water';
+  M2.wet.visible = M2.wetOv.visible = wet;
+  if (!wet) { M1.env(); UW.uVignette.value = 0.45; return; }
+  const sunW = V(0.22, -1, 0.12).normalize();
+  setSky({ top: '#7cc4dc', hor: '#1f6173', bot: '#0b2a33', sunDir: V(-0.22, 1, -0.12), sunCol: [0.4, 0.45, 0.4] });
+  setLights({ sky: '#a8dcef', ground: '#2a3d33', hemi: 0.7, sunCol: '#fff6e0', sun: 3.2, pos: sunW.clone().multiplyScalar(-40), target: V(-12, -4, 0), ext: 30 });
+  setWater(Object.assign(waterOptics('coastal', 0.1, 0.55), {
+    min: V(-46, -4.6, -10), max: V(3.3, 7, 10), surfY: 7, mpu: 0.1, depthOffset: 3.3, adapt: 0.55,
+    sunW, sunCol: [0.32, 0.31, 0.28], skyCol: [0.14, 0.155, 0.16], shaft: 0.9, shaftScale: 0.3, shaftFade: 0.05, caust: 0.6, causScale: 0.45
+  }));
+  UW.uExposure.value = 1.0; UW.uVignette.value = 0.5;
+};
+
+/* underwater housing, drawn cut away (near half removed) so the rays inside stay visible */
+function m2Housing(g, st) {
+  const cut = { clippingPlanes: CUT, side: THREE.DoubleSide };
+  const body = stdMat('#3a4247', 0.38, 0.75, cut), dark = stdMat('#121517', 0.45, 0.5, cut), red = stdMat('#b8322a', 0.35, 0.6);
+  const x0 = st.port === 'flat' ? FLAT_X + 0.12 : 0.05, x1 = 2.9;
+  const half = Math.max(1.3, st.port === 'dome' ? st.R / 10 + 0.12 : 1.3);
+  const sh = new THREE.Shape(), r = 0.38, hw = half;
+  sh.moveTo(-hw + r, -hw); sh.lineTo(hw - r, -hw); sh.quadraticCurveTo(hw, -hw, hw, -hw + r); sh.lineTo(hw, hw - r); sh.quadraticCurveTo(hw, hw, hw - r, hw);
+  sh.lineTo(-hw + r, hw); sh.quadraticCurveTo(-hw, hw, -hw, hw - r); sh.lineTo(-hw, -hw + r); sh.quadraticCurveTo(-hw, -hw, -hw + r, -hw);
+  const hole = new THREE.Path(); hole.absarc(0, 0, hw - 0.14, 0, Math.PI * 2, true); sh.holes.push(hole);
+  const shell = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: x1 - x0, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 3, curveSegments: 24 }), body);
+  shell.rotation.y = Math.PI / 2; shell.position.x = x0; g.add(shadowy(shell));
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(hw - 0.1, hw - 0.1, 0.1, 48), dark);
+  back.rotation.z = Math.PI / 2; back.position.x = x1 - 0.05; g.add(back);
+  const camBody = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 1.9), stdMat('#1b1e20', 0.55, 0.2, cut));
+  camBody.position.x = 1.75; g.add(camBody);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 1.15, 40, 1, true), stdMat('#15191b', 0.4, 0.55, cut));
+  barrel.rotation.z = Math.PI / 2; barrel.position.x = 0.6; g.add(barrel);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(st.port === 'flat' ? 1.18 : st.R / 10, 0.07, 16, 72), dark);
+  ring.rotation.y = Math.PI / 2; ring.position.x = st.port === 'flat' ? FLAT_X + 0.08 : 0.02; g.add(ring);
+  [[1.2, 0.9], [2.1, -0.8], [2.4, 0.5]].forEach(([x, z]) => {
+    const k = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.28, 20), red); k.position.set(x, hw + 0.14, -Math.abs(z)); g.add(shadowy(k));
+  });
+  if (st.port === 'flat') {
+    const glass = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.06, 64), glassMat(0.2));
+    glass.rotation.z = Math.PI / 2; glass.position.x = FLAT_X; g.add(glass);
+    M2.portLabel.pos.set(FLAT_X, hw + 0.3, 0); M2.portLabel.el.textContent = 'Flat port';
+  } else {
+    const R = st.R / 10;
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2), glassMat(0.18));
+    dome.rotation.z = Math.PI / 2; g.add(dome);
+    M2.portLabel.pos.set(-R * 0.7, R * 0.75 + 0.3, 0); M2.portLabel.el.textContent = `Dome port · R ${st.R} cm`;
+  }
+}
+function m2Optics(st) {
+  const n = st.medium === 'water' ? N_WATER : 1;
+  const d = st.dist * 10, P = V(-d, FISH_Y, 0);
+  let xv, mv;
+  if (st.port === 'flat') { const s = FLAT_X - P.x; xv = FLAT_X - s / n; mv = 1; }
+  else { const R = st.R / 10, s = -R - P.x, sp = 1 / ((1 - n) / R - n / s); xv = -R + sp; mv = -(n * sp) / s; }
+  const alpha = Math.atan(0.1 / st.dist);
+  const h = rad(st.fov / 2);
+  let sizeRatio = 1, fovW = st.fov;
+  if (st.port === 'flat' && n > 1) {
+    sizeRatio = Math.tan(Math.asin(Math.min(0.9999, n * Math.sin(alpha)))) / Math.tan(alpha);
+    fovW = 2 * deg(Math.asin(Math.sin(h) / n));
+  }
+  let fringe = 0;
+  if (st.port === 'flat' && n > 1) {
+    const aw = Math.asin(Math.sin(h) / n);
+    const tr = Math.tan(Math.asin(N_RED * Math.sin(aw))), tb = Math.tan(Math.asin(N_BLUE * Math.sin(aw)));
+    fringe = (tb - tr) / Math.tan(h) * 3000;
+  }
+  return { n, d, P, xv, mv, sizeRatio, fovW, fringe, apparent: -xv / 10 };
+}
+function m2Update() {
+  const st = M2.st, o = m2Optics(st), g = M2.dyn;
+  clearGroup(g);
+  M2.env();
+  const hKey = st.port + st.R;
+  if (M2.hKey !== hKey) { disposeGroup(M2.housing); m2Housing(M2.housing, st); M2.hKey = hKey; }
+  const pupil = own(new THREE.Mesh(new THREE.CircleGeometry(0.14, 32), new THREE.MeshBasicMaterial({ color: lin('#f2b64e'), side: THREE.DoubleSide })));
+  pupil.rotation.y = Math.PI / 2; pupil.position.x = -0.001; g.add(pupil);
+  const { n, P } = o;
+  M2.fish.position.copy(P);
+  M2.fishLabel.pos.set(P.x, P.y + 1.1, 0);
+  M2.ghost.visible = n > 1;
+  M2.ghostLabel.show = n > 1;
+  if (n > 1) {
+    M2.ghost.position.set(o.xv, FISH_Y * o.mv, 0); M2.ghost.scale.setScalar(4 * o.mv);
+    M2.ghostLabel.pos.set(o.xv, FISH_Y * o.mv + 1.1 * o.mv + 0.25, 0);
+  }
+  // rays from the fish through the port to the entrance pupil (Fermat's principle)
+  const pup = [];
+  [-1, -0.5, 0, 0.5, 1].forEach(k => pup.push(V(0, 0.13 * k, 0)));
+  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; pup.push(V(0, 0.13 * Math.cos(a), 0.13 * Math.sin(a))); }
+  const R = st.R / 10;
+  pup.forEach((Q, i) => {
+    let M;
+    if (st.port === 'flat') {
+      const A = V(FLAT_X, P.y, P.z), B = V(FLAT_X, Q.y, Q.z);
+      const t = golden(t => { const X = A.clone().lerp(B, t); return n * X.distanceTo(P) + X.distanceTo(Q); }, -0.5, 1.5);
+      M = A.clone().lerp(B, t);
+    } else {
+      const u = P.clone().normalize();
+      let v = Q.clone().sub(u.clone().multiplyScalar(Q.dot(u)));
+      if (v.length() < 1e-7) v = V(0, 0, 1).cross(u);
+      v.normalize();
+      const at = ph => u.clone().multiplyScalar(R * Math.cos(ph)).add(v.clone().multiplyScalar(R * Math.sin(ph)));
+      M = at(golden(ph => { const X = at(ph); return n * X.distanceTo(P) + X.distanceTo(Q); }, -1.3, 1.3));
+    }
+    const meri = i < 5, op = meri ? 0.9 : 0.35, r = meri ? 0.018 : 0.009;
+    seg(g, P, M, '#F2D15A', r, op * 0.85);
+    seg(g, M, Q, '#F2B64E', r, op);
+    if (n > 1 && meri) {
+      const dir = M.clone().sub(Q).normalize();
+      const L = (o.xv - M.x) / dir.x;
+      if (L > 0 && L < 60) dashed(g, M, M.clone().addScaledVector(dir, L), '#F2B64E', 0.011, 0.55, 0.22, 0.16);
+    }
+  });
+  // field of view cones
+  const h = rad(st.fov / 2), xFar = -Math.min(o.d + 6, 40);
+  const ringN = 48, near = [], far = [];
+  const traceEdge = (dir, nn) => {
+    let M, w;
+    if (st.port === 'flat') { M = dir.clone().multiplyScalar(FLAT_X / dir.x); w = refract(dir, V(1, 0, 0), 1, nn); }
+    else { M = dir.clone().multiplyScalar(R); w = dir.clone(); }
+    return [M, M.clone().addScaledVector(w, (xFar - M.x) / w.x)];
+  };
+  for (let k = 0; k <= ringN; k++) {
+    const a = k / ringN * Math.PI * 2;
+    const dir = V(-Math.cos(h), Math.sin(h) * Math.cos(a), Math.sin(h) * Math.sin(a));
+    const [M, Fp] = traceEdge(dir, n); near.push(M); far.push(Fp);
+  }
+  const posArr = [];
+  for (let k = 0; k < ringN; k++) {
+    const a = near[k], b = near[k + 1], c = far[k], d = far[k + 1];
+    posArr.push(a.x, a.y, a.z, c.x, c.y, c.z, b.x, b.y, b.z, b.x, b.y, b.z, c.x, c.y, c.z, d.x, d.y, d.z);
+  }
+  const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
+  g.add(own(new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ color: lin('#43A9C6'), transparent: true, opacity: 0.09, side: THREE.DoubleSide, depthWrite: false }))));
+  [0, ringN / 2].forEach(k => seg(g, near[k], far[k], '#43A9C6', 0.02, 0.9));
+  const ringLine = new THREE.BufferGeometry().setFromPoints(far);
+  g.add(own(new THREE.Line(ringLine, new THREE.LineBasicMaterial({ color: lin('#43A9C6'), transparent: true, opacity: 0.6 }))));
+  // same lens on land (dashed)
+  if (n > 1 && st.port === 'flat') {
+    [1, -1].forEach(sy => {
+      const dir = V(-Math.cos(h), sy * Math.sin(h), 0);
+      dashed(g, V(0, 0, 0), dir.clone().multiplyScalar(xFar / dir.x), '#F2B64E', 0.013, 0.6, 0.35, 0.25);
+    });
+    M2.airLabel.show = true; M2.airLabel.el.textContent = `On land: ${st.fov}°`;
+    M2.airLabel.pos.set(xFar * 0.72, Math.tan(h) * -xFar * 0.72, 0);
+  } else M2.airLabel.show = false;
+  M2.fovLabel.el.textContent = `${n > 1 ? 'In water' : 'In air'}: ${fmt(o.fovW, 0)}°`;
+  M2.fovLabel.pos.copy(far[ringN / 2]).lerp(near[ringN / 2], 0.3);
+  // dispersion at the frame edge
+  if (st.disp && n > 1 && st.port === 'flat') {
+    const dir = V(-Math.cos(h), Math.sin(h), 0);
+    [[N_WATER - 0.02, '#FF5A4A'], [N_WATER + 0.065, '#5A7BFF']].forEach(([nn, c]) => { const [M, Fp] = traceEdge(dir, nn); seg(g, M, Fp, c, 0.018, 0.9); });
+  }
+  m2Readouts(o);
+  m2Inset(o);
+}
+function m2Readouts(o) {
+  const st = M2.st, water = o.n > 1;
+  const rows = [
+    ['Real distance to fish', fmtDist(st.dist)],
+    ['Apparent distance (focus here)', fmtDist(o.apparent)],
+    ['Apparent size vs on land', `${fmt(o.sizeRatio * 100, 0)}%`],
+    ['Angle of view', `${fmt(o.fovW, 0)}° <span style="color:var(--muted)">(lens: ${st.fov}°)</span>`]
+  ];
+  if (st.port === 'flat' && water) rows.push(['Colour fringe at frame edge', `≈ ${fmt(o.fringe, 0)} px<span class="pill ${o.fringe > 15 ? 'bad' : 'warn'}">on a 6000 px sensor</span>`]);
+  if (st.port === 'dome' && water) rows.push(['Close-focus needed', o.apparent < 0.3 ? `${fmtDist(o.apparent)}<span class="pill bad">add dioptre</span>` : `${fmtDist(o.apparent)}<span class="pill good">ok for most lenses</span>`]);
+  M2.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  let t;
+  if (!water) t = `<p>In air the port does nothing: light meets glass with the same refractive index on both sides of a thin window, so rays pass straight through. The camera sees the fish at its real distance, <b>${fmtDist(st.dist)}</b>, with the lens’s full <b>${st.fov}°</b> angle of view. Now switch the medium to water.</p>`;
+  else if (st.port === 'flat') t = `
+    <p>Light leaves water (n ≈ 1.33) and enters air (n = 1.00) at the flat port. By Snell’s law, n<sub>1</sub>sin θ<sub>1</sub> = n<sub>2</sub>sin θ<sub>2</sub>, so every ray bends <b>away</b> from the normal. Trace the air rays backwards (dashed) and they meet closer than the fish.</p>
+    <p>The fish ${fmtDist(st.dist)} away looks <b>${fmtDist(o.apparent)}</b> away, about ¾ of the real distance, and <b>${fmt(o.sizeRatio * 100 - 100, 0)}% bigger</b>. Divers misjudge distance for the same reason. The lens’s ${st.fov}° view shrinks to <b>${fmt(o.fovW, 0)}°</b>, so a wide-angle lens stops being wide.</p>
+    <p>Refraction also depends on wavelength: blue bends more than red. Toward the edge of the frame that splits colours by about <b>${fmt(o.fringe, 0)} px</b> and stretches straight lines outward (pincushion distortion). Flat ports suit macro work, where the field is narrow.</p>`;
+  else t = `
+    <p>A dome port is part of a sphere centred on the lens’s entrance pupil. Every ray heading for the centre of the lens meets the dome <b>square-on</b>, so it doesn’t bend. The full <b>${st.fov}°</b> angle of view survives, with no extra magnification and almost no colour fringing.</p>
+    <p>The water–air curve still acts as a weak diverging lens. It forms a <b>virtual image</b> of the fish just in front of the dome: the fish ${fmtDist(st.dist)} away appears <b>${fmtDist(o.apparent)}</b> from the lens, at <b>${fmt(o.mv * 100, 0)}%</b> of its real size. The camera has to focus on that virtual image, not on the fish.</p>
+    <p>So wide-angle lenses behind domes must focus very close (often with a dioptre), and bigger domes push the virtual image further out, which is easier on the corners.</p>`;
+  M2.talkEl.innerHTML = t;
+}
+function m2Inset(o) {
+  const { ctx, w, h } = M2.inset, st = M2.st;
+  const d = st.dist, th = Math.tan(rad(st.fov / 2));
+  const water = o.n > 1;
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.fillStyle = water ? '#0d2a33' : '#1a2427'; ctx.fillRect(0, 0, w, h);
+  const project = (Y, Z, nn) => {
+    const L = Math.hypot(d, Y, Z), ty = Y / L, tz = Z / L;
+    let ay = ty, az = tz;
+    if (st.port === 'flat') { ay = nn * ty; az = nn * tz; }
+    const s2 = ay * ay + az * az; if (s2 >= 1) return null;
+    const ax = Math.sqrt(1 - s2);
+    return [w / 2 + (az / ax) / th * (w / 2), h / 2 - (ay / ax) / th * (w / 2)];
+  };
+  const drawGrid = (nn, color) => {
+    const gs = 0.1 * d, ext = 3 * d, steps = 60;
+    ctx.strokeStyle = color; ctx.lineWidth = 1;
+    for (let pass = 0; pass < 2; pass++) for (let k = -30; k <= 30; k++) {
+      ctx.beginPath(); let started = false;
+      for (let i = 0; i <= steps; i++) {
+        const a = -ext + 2 * ext * i / steps, b = k * gs;
+        const p = pass ? project(b, a, nn) : project(a, b, nn);
+        if (!p) { started = false; continue; }
+        started ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); started = true;
+      }
+      ctx.stroke();
+    }
+  };
+  const fishPath = nn => {
+    ctx.beginPath();
+    FISH_PTS.forEach((p, i) => { const q = project(0.1 + p.y * 0.4, -p.x * 0.4, nn) || [0, 0]; i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); });
+    ctx.closePath();
+  };
+  const nUse = water ? N_WATER : 1;
+  if (st.disp && water && st.port === 'flat') {
+    ctx.globalCompositeOperation = 'lighter';
+    drawGrid(N_WATER - 0.02, 'rgba(255,80,60,.55)');
+    drawGrid(N_WATER + 0.065, 'rgba(70,110,255,.7)');
+    ctx.fillStyle = 'rgba(255,90,70,.5)'; fishPath(N_WATER - 0.02); ctx.fill();
+    ctx.fillStyle = 'rgba(80,120,255,.5)'; fishPath(N_WATER + 0.065); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  } else {
+    drawGrid(nUse, water ? 'rgba(67,169,198,.45)' : 'rgba(139,162,166,.4)');
+    ctx.fillStyle = '#F2D15A'; fishPath(nUse); ctx.fill();
+  }
+  if (water) {
+    ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = 'rgba(227,236,234,.9)'; ctx.lineWidth = 1.5;
+    const saved = st.port; st.port = 'dome'; fishPath(1); st.port = saved; ctx.stroke(); ctx.restore();
+  }
+  ctx.fillStyle = 'rgba(227,236,234,.85)'; ctx.font = '600 11px "JetBrains Mono", monospace';
+  ctx.fillText(`${water ? 'underwater' : 'in air'} · ${st.port} port · ${st.fov}° lens`, 10, h - 10);
+}
+(function panelM2() {
+  const m = modShell(1, 'What the port does underwater', 'The same camera in a housing. Light has to cross the port from water into air before it reaches the lens, and the port’s shape decides what happens.');
+  const g = groupBox(m, 'Controls');
+  segmented(g, { id: 'm2-medium', label: 'Housing is in', value: 'water', options: [['water', 'Water'], ['air', 'Air']] }, v => { M2.st.medium = v; m2Update(); });
+  segmented(g, { id: 'm2-port', label: 'Port type', value: 'flat', options: [['flat', 'Flat port'], ['dome', 'Dome port']] }, v => { M2.st.port = v; m2Update(); });
+  slider(g, { id: 'm2-dist', label: 'Fish distance', min: 0.3, max: 3, step: 0.05, value: 1, fmt: v => fmtDist(v) }, v => { M2.st.dist = v; m2Update(); });
+  slider(g, { id: 'm2-fov', label: 'Lens angle of view (on land)', min: 40, max: 130, step: 1, value: 94, fmt: v => v + '°' }, v => { M2.st.fov = v; m2Update(); });
+  slider(g, { id: 'm2-R', label: 'Dome radius', min: 4, max: 12, step: 0.5, value: 10, fmt: v => v + ' cm' }, v => { M2.st.R = v; m2Update(); });
+  toggle(g, { id: 'm2-disp', label: 'Show colour splitting (×10 exaggerated)', value: false }, v => { M2.st.disp = v; m2Update(); });
+  M2.inset = insetBox(m, 'Through the viewfinder', 360, 240, 'A 10 cm grid on a reef wall behind the fish. The dashed outline is the same shot taken on land.');
+  const r = el('dl', { class: 'readouts' }); m.appendChild(r); M2.readEl = r;
+  const t = el('div', { class: 'talk' }); t.appendChild(el('p', { class: 'eyebrow' }, 'Say it in class'));
+  M2.talkEl = el('div'); t.appendChild(M2.talkEl); m.appendChild(t);
+})();
+M2.viewsFn = () => {
+  const d = M2.st.dist * 10;
+  return { side: { t: V(-d / 2, 0.6, 0), r: Math.max(16, d * 1.15 + 8), az: 0, el: 0.02 }, d3: { t: V(-d / 2, 0.3, 0), r: Math.max(18, d * 1.2 + 10), az: -0.8, el: 0.4 } };
+};
+
+/* =====================================================================
+   MODULE 3 — LIGHT IN WATER
+   units: depth 1 = 2 m; horizontal camera–slate distance exaggerated
+   ===================================================================== */
+const WL_COL = ['#7B3FD1', '#3D5BFF', '#18B6C9', '#5CD65C', '#F5A623', '#F0402C', '#A3141B'];
+// Approximate diffuse attenuation Kd(λ) in m⁻¹ (after Jerlov water types; values rounded for teaching)
+const KD = {
+  ocean: [0.028, 0.019, 0.027, 0.063, 0.235, 0.36, 0.56],
+  coastal: [0.20, 0.12, 0.09, 0.10, 0.28, 0.40, 0.62],
+  turbid: [1.6, 1.1, 0.75, 0.6, 0.72, 0.85, 1.1]
+};
+const WATER_NAME = { ocean: 'clear open ocean', coastal: 'coastal water', turbid: 'turbid estuary' };
+const PARTICLES = { ocean: 40, coastal: 170, turbid: 480 };
+const PATCHES = [
+  ['Red', [0.05, 0.04, 0.04, 0.05, 0.35, 0.8, 0.85]],
+  ['Orange', [0.05, 0.05, 0.07, 0.25, 0.75, 0.8, 0.8]],
+  ['Yellow', [0.06, 0.08, 0.4, 0.8, 0.85, 0.85, 0.85]],
+  ['Green', [0.05, 0.1, 0.45, 0.55, 0.15, 0.06, 0.05]],
+  ['Blue', [0.45, 0.6, 0.35, 0.08, 0.04, 0.04, 0.05]],
+  ['White', [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]]
+];
+function spec2rgb(s) { const o = [0, 0, 0]; s.forEach((v, i) => { for (let c = 0; c < 3; c++) o[c] += v * BINW[i][c]; }); return o.map((v, c) => v / BINN[c]); }
+const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+const enc = v => { v = clamp(v, 0, 1); return v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055; };
+const css = c => `rgb(${c.map(v => Math.round(enc(v) * 255)).join(',')})`;
+function displayLight(E) { // downwelling colour with partial exposure compensation, for the water column
+  const c = spec2rgb(E), L = Math.max(lum(c), 1e-5), k = Math.pow(1 / L, 0.72);
+  return c.map(v => v * k * 0.8);
+}
+const SCATTER = { ocean: 0.03, coastal: 0.25, turbid: 1.4 };
+/* per-channel extinction and scattering for view paths, from the same spectral Kd table */
+function waterOptics(type, mpu, visual) {
+  const kd = KD[type];
+  const k = spec2rgb(kd.map(v => Math.exp(-v))).map(v => -Math.log(Math.max(v, 1e-4)));
+  const b = SCATTER[type];
+  return { kd, sigT: k.map(v => (v + b) * mpu * visual), sigS: [b, b, b].map(v => v * mpu * visual) };
+}
+const M3 = {
+  group: new THREE.Group(), dyn: new THREE.Group(), ov: new THREE.Group(),
+  st: { water: 'coastal', depth: 12, dist: 1.5, sun: 55, strobe: false, arms: 'close', wb: false, snell: true },
+  scale: 'Depth: 1 grid step = 2 m · camera-to-slate distance exaggerated · Kd approximate (after Jerlov)',
+  fish: []
+};
+(function buildM3() {
+  const g = M3.group; world.add(g);
+  overlay.add(M3.ov); M3.ov.add(M3.dyn);
+  // seabed at 40 m with a cut-away block of sediment underneath
+  const bed = new THREE.Mesh(new THREE.PlaneGeometry(80, 66, 120, 100), sandMat(26));
+  const bp = bed.geometry.attributes.position, nb = noiseField(256, 256, 24, 31), nc = noiseField(256, 256, 6, 33);
+  for (let i = 0; i < bp.count; i++) { const x = bp.getX(i) * 3 + 512, y = bp.getY(i) * 3 + 512; bp.setZ(i, (nb(x, y) - 0.5) * 1.6 + (nc(x, y) - 0.5) * 0.35); }
+  bed.geometry.computeVertexNormals();
+  bed.rotation.x = -Math.PI / 2; bed.position.set(0, -20, -27); g.add(shadowy(bed, false, true));
+  const layers = canvasTex(256, 64, (ctx, w, h) => {
+    const cols = ['#b9a37a', '#9c8660', '#8a7453', '#6f5d43', '#5b4c38'];
+    for (let y = 0; y < h; y++) { ctx.fillStyle = cols[Math.min(4, Math.floor(y / h * 5 + Math.sin(y * 0.7) * 0.3))]; ctx.fillRect(0, y, w, 1); }
+    for (let i = 0; i < 700; i++) { ctx.fillStyle = `rgba(40,30,20,${Math.random() * 0.25})`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 1); }
+  }, true, [8, 1]);
+  const sed = new THREE.Mesh(new THREE.BoxGeometry(80, 2.4, 66), stdMat('#ffffff', 1, 0, { map: layers }));
+  sed.position.set(0, -21.25, -27); g.add(sed);
+  [[-14, -8, 2.6, 41], [-20, -18, 3.4, 43], [9, -14, 2.2, 47], [18, -24, 4, 53], [-5, -30, 3, 59], [26, -6, 1.8, 61], [-27, -3, 2, 67]]
+    .forEach(([x, z, sz, sd]) => { const r = makeRock(sz, sd, '#5a574e'); r.position.set(x, -19.6, z); r.rotation.y = sd; g.add(r); });
+  // mooring rig: buoy, rope and anchor for the slate and for the camera
+  const ropeMat = uwify(stdMat('#cdbb8a', 0.9, 0), false), buoyMat = stdMat('#ff6a1f', 0.35, 0.05);
+  M3.rig = ['slate', 'cam'].map(() => {
+    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 20.4, 8), ropeMat); rope.position.y = -10; g.add(shadowy(rope));
+    const buoy = new THREE.Mesh(new THREE.SphereGeometry(0.55, 32, 16), uwify(buoyMat.clone(), false)); buoy.position.y = 0.15; g.add(shadowy(buoy));
+    const anchor = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.9), uwify(stdMat('#8d8a82', 0.95, 0), true)); anchor.position.y = -19.8; g.add(shadowy(anchor));
+    return { rope, buoy, anchor };
+  });
+  // colour slate
+  M3.slate = new THREE.Group(); g.add(M3.slate);
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.86, 1.2), uwify(stdMat('#e9ecea', 0.55, 0), false));
+  M3.slate.add(shadowy(board));
+  M3.patchMeshes = PATCHES.map((p, i) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.33, 0.31), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    m.rotation.y = Math.PI / 2; m.position.set(0.045, i < 3 ? 0.19 : -0.19, -0.38 + (i % 3) * 0.38); M3.slate.add(m); return m;
+  });
+  // camera in its housing, strobe on an arm
+  M3.camera = new THREE.Group(); g.add(M3.camera);
+  const housing = uwify(stdMat('#2f383d', 0.35, 0.8), false);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.44, 0.58), housing); M3.camera.add(shadowy(body));
+  const port = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.32, 32), uwify(stdMat('#111416', 0.3, 0.6), false));
+  port.rotation.z = Math.PI / 2; port.position.x = -0.4; M3.camera.add(port);
+  const glassFace = new THREE.Mesh(new THREE.CircleGeometry(0.16, 32), glassMat(0.5, '#9fc6d6')); glassFace.rotation.y = -Math.PI / 2; glassFace.position.x = -0.565; M3.camera.add(glassFace);
+  M3.strobe = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.26, 24), uwify(stdMat('#2a2e31', 0.4, 0.6), false));
+  g.add(shadowy(M3.strobe));
+  M3.strobeFace = new THREE.Mesh(new THREE.CircleGeometry(0.12, 24), new THREE.MeshBasicMaterial({ color: lin('#fff6d8') }));
+  M3.ov.add(M3.strobeFace);
+  M3.arm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 8), uwify(stdMat('#9aa3a8', 0.35, 0.9), false)); g.add(M3.arm);
+  // red fish at four depths: the same colour, seen through different amounts of water
+  [4, 12, 24, 34].forEach((dm, k) => {
+    for (let i = 0; i < 3; i++) {
+      const f = makeFish({ back: '#d8261c', belly: '#ff8a6e', water: true });
+      f.scale.setScalar(1.1); g.add(f);
+      M3.fish.push({ f, c: V(-9.5 + k * 0.8, -dm / 2 + (i - 1) * 0.3, 1.5 - k * 0.4), R: 1.6 + i * 0.35, w: 0.3 + i * 0.04, ph: i * 2.1 + k });
+    }
+    const L = mkLabel(2, `Red fish · ${dm} m`, '#F0735A'); L.pos.set(-9.5 + k * 0.8, -dm / 2 + 1.0, 1.5 - k * 0.4);
+  });
+  // depth staff on the cut face
+  M3.colCanvas = document.createElement('canvas'); M3.colCanvas.width = 4; M3.colCanvas.height = 256;
+  M3.colTex = new THREE.CanvasTexture(M3.colCanvas); M3.colTex.encoding = THREE.sRGBEncoding;
+  const staff = new THREE.Mesh(new THREE.BoxGeometry(0.55, 20, 0.12), new THREE.MeshBasicMaterial({ map: M3.colTex }));
+  staff.position.set(-13, -10, 6.1); M3.ov.add(staff);
+  for (let m = 0; m <= 40; m += 5) {
+    seg(M3.ov, V(-13.3, -m / 2, 6.2), V(-12.4, -m / 2, 6.2), '#E3ECEA', 0.022, 0.9);
+    const L = mkLabel(2, `${m} m`, '#8BA2A6'); L.pos.set(-14.1, -m / 2, 6.2); L.lift = -1;
+  }
+  M3.staffLabel = mkLabel(2, 'Daylight left', '#E3ECEA'); M3.staffLabel.pos.set(-13, 0.9, 6.2);
+  // sea surface: animated waves that reflect the sky
+  const sm = new THREE.MeshPhysicalMaterial({ color: lin('#0c4a5a'), roughness: 0.05, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, transparent: true, opacity: 0.55, envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false });
+  sm.onBeforeCompile = sh => {
+    sh.uniforms.uTime = UW.uTime;
+    const wv = 'float wv(vec2 p) { return 0.09 * sin(p.x * 1.1 + uTime * 1.2) + 0.06 * sin(p.y * 1.7 - uTime * 0.9) + 0.035 * sin((p.x + p.y) * 3.1 + uTime * 2.0) + 0.02 * sin(p.x * 5.3 - p.y * 4.1 + uTime * 2.7); }\n';
+    sh.vertexShader = 'uniform float uTime;\n' + wv + sh.vertexShader
+      .replace('#include <beginnormal_vertex>', 'float e = 0.05; vec3 objectNormal = normalize(vec3(-(wv(position.xy + vec2(e, 0.0)) - wv(position.xy - vec2(e, 0.0))) / (2.0 * e), -(wv(position.xy + vec2(0.0, e)) - wv(position.xy - vec2(0.0, e))) / (2.0 * e), 1.0));')
+      .replace('#include <begin_vertex>', 'vec3 transformed = vec3(position.xy, wv(position.xy));');
+  };
+  M3.surface = new THREE.Mesh(new THREE.PlaneGeometry(80, 66, 200, 165), sm);
+  M3.surface.rotation.x = -Math.PI / 2; M3.surface.position.set(0, 0, -27); M3.ov.add(M3.surface);
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(80, 0.04, 0.04), basicMat('#bfe6f0', 0.5)); rim.position.set(0, 0, 6); M3.ov.add(rim);
+  M3.sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: SPRITE, color: lin('#ffe2a0'), blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  M3.sun.scale.setScalar(5); M3.ov.add(M3.sun);
+  M3.sunLabel = mkLabel(2, 'Sun', '#FFD98A');
+  M3.camLabel = mkLabel(2, 'Camera', '#E3ECEA');
+  M3.slateLabel = mkLabel(2, 'Colour slate', '#E3ECEA');
+  M3.snellLabel = mkLabel(2, "Snell's window · 97°", '#FFD98A');
+  M3.tirLabel = mkLabel(2, 'Mirror (total internal reflection)', '#8BA2A6'); M3.tirLabel.lift = -1;
+  M3.reflLabel = mkLabel(2, '', '#FFD98A');
+  M3.refrLabel = mkLabel(2, '', '#FFD98A'); M3.refrLabel.lift = -1;
+  // marine snow through the column, plus the particles the strobe can light
+  const pm = () => new THREE.PointsMaterial({ size: 0.13, map: SPRITE, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false });
+  M3.snowGeo = new THREE.BufferGeometry(); M3.ov.add(new THREE.Points(M3.snowGeo, pm()));
+  M3.pGeo = new THREE.BufferGeometry(); M3.points = new THREE.Points(M3.pGeo, pm()); M3.points.material.opacity = 0.95; M3.ov.add(M3.points);
+})();
+M3.env = L => {
+  const st = M3.st;
+  const sunW = V(Math.sin(L.tt), -Math.cos(L.tt), 0);
+  const sunUp = V(-Math.cos(L.e), Math.sin(L.e), 0);
+  const low = 1 - Math.sin(L.e);
+  setSky({ top: '#1d5d98', hor: low > 0.6 ? '#e8c9a0' : '#b9d4e0', bot: '#06141b', sunDir: sunUp, sunCol: [1.0, 0.9 - 0.2 * low, 0.75 - 0.35 * low] });
+  const k = (1 - L.Rf) * Math.max(0.2, Math.sin(L.e));
+  setLights({ sky: '#bfe3f2', ground: '#16221f', hemi: 0.45 + 0.3 * k, sunCol: '#fff3dd', sun: 3.4 * k, pos: V(0, -8, -8).addScaledVector(sunW, -70), target: V(0, -8, -8), ext: 42, far: 180 });
+  setWater(Object.assign(waterOptics(st.water, 2, 0.13), {
+    min: V(-40, -20, -60), max: V(40, 0, 6), surfY: 0, mpu: 2, depthOffset: 0, adapt: 0.62,
+    sunW, sunCol: [0.44 * k, 0.43 * k, 0.4 * k], skyCol: [0.11, 0.125, 0.135],
+    shaft: st.water === 'turbid' ? 0.35 : 1.0, shaftScale: 1.1, shaftFade: st.water === 'ocean' ? 0.025 : 0.07, caust: 0.8, causScale: 0.5
+  }));
+  UW.uExposure.value = 1.1; UW.uVignette.value = 0.4;
+};
+function m3Light(st) {
+  const K = KD[st.water];
+  const e = rad(st.sun), ti = Math.PI / 2 - e, tt = Math.asin(Math.sin(ti) / N_WATER);
+  const ci = Math.cos(ti), ct = Math.cos(tt);
+  const rs = ((ci - N_WATER * ct) / (ci + N_WATER * ct)) ** 2, rp = ((ct - N_WATER * ci) / (ct + N_WATER * ci)) ** 2;
+  const Rf = (rs + rp) / 2;
+  const amb = (1 - Rf) * Math.max(0.12, Math.sin(e));
+  const E = K.map(k => Math.exp(-k * st.depth));
+  const r = st.dist;
+  const strobeS = 0.55;
+  const incident = K.map((k, i) => amb * E[i] * Math.exp(-k * r) + (st.strobe ? strobeS * Math.exp(-2 * k * r) / Math.max(r, 0.3) ** 2 : 0));
+  const rec = refl => spec2rgb(refl.map((v, i) => v * incident[i]));
+  const white = rec(PATCHES[5][1]);
+  const gain = Math.min(0.85 / Math.max(lum(white), 1e-6), 60);
+  const wb = st.wb ? white.map(c => clamp(lum(white) / Math.max(c, 1e-6), 0.25, 8)) : [1, 1, 1];
+  const finish = c => c.map((v, i) => clamp(v * gain * wb[i], 0, 1));
+  const patches = PATCHES.map(([name, refl]) => ({ name, rec: finish(rec(refl)), truth: spec2rgb(refl) }));
+  const inc3 = K.map((k, i) => amb * E[i] + (st.strobe ? strobeS * Math.exp(-k * r) / Math.max(r, 0.3) ** 2 : 0));
+  const aF = Math.pow(Math.max(lum(spec2rgb(E)), 0.02), -0.62);
+  const slate3D = PATCHES.map(([, refl]) => spec2rgb(refl.map((v, i) => v * inc3[i])).map(c => c * aF * 1.15));
+  const waterBg = finish(spec2rgb(K.map((k, i) => amb * E[i] * (st.water === 'turbid' ? 0.18 : st.water === 'coastal' ? 0.1 : 0.06))));
+  return { K, e, ti, tt, Rf, E, patches, waterBg, gain, slate3D };
+}
+function m3Column(K) {
+  const cx = M3.colCanvas.getContext('2d');
+  for (let j = 0; j < 256; j++) {
+    const z = j / 255 * 40;
+    cx.fillStyle = css(displayLight(K.map(k => Math.exp(-k * z))));
+    cx.fillRect(0, j, 4, 1);
+  }
+  M3.colTex.needsUpdate = true;
+}
+/* strobe beam: 80° wide. Beside the lens it points at the slate; out on arms it is
+   feathered outward so only the inner edge of the beam reaches the slate */
+const STROBE_HALF = 40;
+function strobeAim(S, C, T, arms) {
+  if (arms === 'close') return T.clone();
+  const axis = T.clone().sub(C).normalize(), ST = T.clone().sub(S).normalize();
+  const off = S.clone().sub(C); off.addScaledVector(axis, -off.dot(axis)); off.normalize();
+  let A = T.clone();
+  for (let k = 0; k < 30; k += 0.05) {
+    A = T.clone().addScaledVector(off, k);
+    if (A.clone().sub(S).normalize().angleTo(ST) >= rad(STROBE_HALF - 6)) break;
+  }
+  return A;
+}
+function m3Snow(st) {
+  srand(19);
+  const n = 1400, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), K = KD[st.water];
+  for (let i = 0; i < n; i++) {
+    const y = -0.3 - rnd() * 19.4;
+    pos.set([-22 + rnd() * 44, y, -26 + rnd() * 31.5], i * 3);
+    col.set(displayLight(K.map(k => Math.exp(-k * -y * 2))).map(v => clamp(v * 0.55 + 0.04, 0, 1)), i * 3);
+  }
+  M3.snowGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  M3.snowGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  M3.snowGeo.computeBoundingSphere();
+}
+function m3Particles(st, geo) {
+  const cnt = PARTICLES[st.water];
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pos = new Float32Array(cnt * 3), col = new Float32Array(cnt * 3);
+  const { C, S, T, A } = geo;
+  const toT = T.clone().sub(C).normalize(), sToA = A.clone().sub(S).normalize();
+  let inFrame = [];
+  const water = displayLight(KD[st.water].map(k => Math.exp(-k * st.depth)));
+  for (let i = 0; i < cnt; i++) {
+    const p = V(T.x - 0.3 + rnd() * (C.x - T.x + 0.9), C.y - 1.4 + rnd() * 2.8, -1.5 + rnd() * 3);
+    pos.set([p.x, p.y, p.z], i * 3);
+    const vc = p.clone().sub(C), vs = p.clone().sub(S);
+    const inCam = vc.clone().normalize().dot(toT) > Math.cos(rad(21)) && vc.dot(toT) < T.distanceTo(C);
+    const lit = st.strobe && vs.clone().normalize().dot(sToA) > Math.cos(rad(STROBE_HALF));
+    let c;
+    if (lit && inCam) { c = [1, 0.97, 0.88]; inFrame.push(vc); }
+    else if (lit) c = [0.55, 0.55, 0.5];
+    else c = water.map(v => clamp(v * 0.5 + 0.08, 0, 1));
+    col.set(c, i * 3);
+  }
+  M3.pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  M3.pGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  M3.pGeo.computeBoundingSphere();
+  return { inFrame, toT };
+}
+function m3Update() {
+  const st = M3.st, L = m3Light(st), g = M3.dyn;
+  clearGroup(g);
+  M3.env(L);
+  m3Column(L.K);
+  if (M3.snowKey !== st.water) { m3Snow(st); M3.snowKey = st.water; }
+  // sun and rays
+  const sd = V(-Math.cos(L.e), Math.sin(L.e), 0);
+  M3.sun.position.copy(V(-3, 0, 0).addScaledVector(sd, 17));
+  M3.sunLabel.pos.copy(M3.sun.position).add(V(0, 1, 0));
+  const tDir = V(Math.sin(L.tt), -Math.cos(L.tt), 0), rDir = V(Math.cos(L.e), Math.sin(L.e), 0);
+  [-6, -4.8, -3.6].forEach((x0, i) => {
+    [-2.2, 0, 2.2].forEach(z => {
+      const H = V(x0, 0, z);
+      seg(g, H.clone().addScaledVector(sd, 14), H, '#FFE3A3', 0.03, 0.85);
+      seg(g, H, H.clone().addScaledVector(rDir, 3 + 10 * L.Rf), '#FFE3A3', 0.02, clamp(0.15 + L.Rf * 3, 0.15, 0.9));
+      const stepLen = 0.6;
+      let P = H.clone();
+      for (let s = 0; s < 60; s++) {
+        const Q = P.clone().addScaledVector(tDir, stepLen);
+        if (Q.y < -20 || Q.x > 40) break;
+        const path = (-(P.y + Q.y) / 2) * 2 / Math.cos(L.tt);
+        const c = displayLight(L.K.map(k => Math.exp(-k * path)));
+        const fade = Math.exp(-0.6 * L.K[2] * path);
+        seg(g, P, Q, css(c), 0.03, clamp(0.25 + 0.7 * fade, 0.25, 0.95));
+        P = Q;
+      }
+    });
+  });
+  M3.reflLabel.el.textContent = `${fmt(L.Rf * 100, 1)}% reflected`;
+  M3.reflLabel.pos.set(-3.6 + rDir.x * 3, rDir.y * 3 + 0.3, 2.2);
+  M3.refrLabel.el.textContent = `bends to ${fmt(deg(L.tt), 0)}° from vertical`;
+  M3.refrLabel.pos.set(-4.8 + tDir.x * 3, tDir.y * 3, 2.2);
+  // camera, slate, strobe
+  const yc = -Math.max(st.depth, 0.6) / 2;
+  const camX = 4.2, slX = camX - (0.7 + st.dist * 0.95);
+  const C = V(camX - 0.5, yc, 0), T = V(slX, yc, 0);
+  M3.camera.position.set(camX, yc, 0);
+  M3.slate.position.set(slX, yc, 0);
+  const S = st.arms === 'close' ? V(camX - 0.3, yc + 0.36, 0) : V(camX + 0.15, yc + 1.5, 1.7);
+  const A = strobeAim(S, C, T, st.arms);
+  M3.strobe.position.copy(S);
+  M3.strobe.quaternion.setFromUnitVectors(YAXIS, S.clone().sub(A).normalize());
+  const armFrom = V(camX, yc + 0.2, 0), armD = S.clone().sub(armFrom);
+  M3.arm.position.copy(armFrom).addScaledVector(armD, 0.5); M3.arm.scale.set(1, armD.length(), 1);
+  M3.arm.quaternion.setFromUnitVectors(YAXIS, armD.clone().normalize());
+  M3.strobeFace.position.copy(S).addScaledVector(A.clone().sub(S).normalize(), 0.14);
+  M3.strobeFace.lookAt(A);
+  M3.strobeFace.material.color.copy(lin(st.strobe ? '#fff6d8' : '#2a2e31'));
+  [[slX - 0.09, 0], [camX + 0.12, -0.36]].forEach(([x, z], i) => {
+    const r = M3.rig[i]; r.rope.position.set(x, -10, z); r.buoy.position.set(x, 0.15, z); r.anchor.position.set(x, -19.8, z);
+  });
+  if (st.strobe) {
+    const dir = A.clone().sub(S).normalize().multiplyScalar(T.distanceTo(S) * 1.15), h = dir.length();
+    const cone = own(new THREE.Mesh(new THREE.ConeGeometry(h * Math.tan(rad(STROBE_HALF)), h, 48, 1, true), new THREE.MeshBasicMaterial({ color: lin('#fff2cc'), transparent: true, opacity: 0.09, side: THREE.DoubleSide, depthWrite: false })));
+    cone.position.copy(S).addScaledVector(dir, 0.5);
+    cone.quaternion.setFromUnitVectors(YAXIS, dir.clone().normalize().negate());
+    g.add(cone);
+  }
+  M3.patchMeshes.forEach((m, i) => m.material.color.setRGB(...L.slate3D[i]));
+  M3.camLabel.pos.set(camX, yc + 0.5, 0);
+  M3.slateLabel.pos.set(slX, yc + 0.6, 0);
+  const pf = m3Particles(st, { C, S, T, A });
+  // Snell's window
+  const hh = -yc, rr = hh * Math.tan(Math.asin(1 / N_WATER));
+  M3.snellLabel.show = M3.tirLabel.show = st.snell;
+  if (st.snell) {
+    const cone = own(new THREE.Mesh(new THREE.ConeGeometry(rr, hh, 64, 1, true), new THREE.MeshBasicMaterial({ color: lin('#ffd98a'), transparent: true, opacity: 0.07, side: THREE.DoubleSide, depthWrite: false })));
+    cone.rotation.x = Math.PI; cone.position.set(camX, yc + hh / 2, 0); g.add(cone);
+    const ring = own(new THREE.Mesh(new THREE.RingGeometry(Math.max(0, rr - 0.08), rr, 96), new THREE.MeshBasicMaterial({ color: lin('#ffd98a'), transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false })));
+    ring.rotation.x = -Math.PI / 2; ring.position.set(camX, 0.03, 0); g.add(ring);
+    seg(g, C.clone().add(V(0.5, 0, 0)), V(camX + rr, 0, 0), '#FFD98A', 0.018, 0.8);
+    seg(g, C.clone().add(V(0.5, 0, 0)), V(camX - rr, 0, 0), '#FFD98A', 0.018, 0.8);
+    M3.snellLabel.pos.set(camX, 0.5, 0);
+    M3.tirLabel.pos.set(camX + rr + 0.8, -0.4, -3);
+  }
+  m3Readouts(L, pf.inFrame.length);
+  m3Inset(L, pf, C);
+}
+function m3Readouts(L, bs) {
+  const st = M3.st, K = L.K;
+  const pct = i => Math.exp(-K[i] * st.depth) * 100;
+  const pf = v => v >= 10 ? fmt(v, 0) + '%' : v >= 1 ? fmt(v, 1) + '%' : fmt(v, 2) + '%';
+  const red10 = Math.log(10) / K[5];
+  const rows = [
+    [`<span class="sw" style="background:${WL_COL[5]}"></span>Red light left (650 nm)`, pf(pct(5))],
+    [`<span class="sw" style="background:${WL_COL[3]}"></span>Green light left (550 nm)`, pf(pct(3))],
+    [`<span class="sw" style="background:${WL_COL[1]}"></span>Blue light left (450 nm)`, pf(pct(1))],
+    ['Red falls to 10% at', fmt(red10, 1) + ' m'],
+    ['Sunlight reflected at surface', fmt(L.Rf * 100, 1) + '%'],
+    ['Backscatter specks in frame', st.strobe ? `${bs}<span class="pill ${bs > 12 ? 'bad' : bs > 3 ? 'warn' : 'good'}">${bs > 12 ? 'heavy' : bs > 3 ? 'some' : 'clean'}</span>` : '—']
+  ];
+  M3.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  const redPatch = L.patches[0].rec;
+  const deepest = WL[K.indexOf(Math.min(...K))];
+  M3.talkEl.innerHTML = `
+    <p>At the surface, sunlight arriving ${st.sun}° above the horizon loses <b>${fmt(L.Rf * 100, 1)}%</b> to reflection. The rest bends toward the vertical, to <b>${fmt(deg(L.tt), 0)}°</b>, so underwater all light seems to come from above.</p>
+    <p>Water then absorbs light unevenly. In ${WATER_NAME[st.water]}, <b>${pf(pct(5))}</b> of red is left at ${st.depth} m, compared with <b>${pf(pct(1))}</b> of blue. The most penetrating colour here is about <b>${deepest} nm</b>. ${st.water === 'ocean' ? 'In clear water that is blue, because water molecules absorb red strongly.' : 'Dissolved organic matter and phytoplankton absorb blue as well, so the window shifts toward green.'}</p>
+    <p>The camera loses colour twice: once on the way down, and again over the <b>${fmtDist(st.dist)}</b> from slate to lens. ${st.strobe ? `The strobe’s full-spectrum light only travels ${fmtDist(st.dist * 2)} there and back, so reds come back when you’re close. ${st.arms === 'close' ? `But a strobe beside the lens lights the particles right in front of it: <b>${bs}</b> specks of backscatter. Move it out on the arms.` : 'On long arms, angled outward, only the edge of the beam crosses the lens’s view near the slate, so backscatter drops.'}` : 'Switch the strobe on to restore colour at short range.'} ${st.wb ? 'Custom white balance boosts the weak channels, but it can’t invent red that never reached the sensor.' : ''}</p>
+    ${st.snell ? `<p>Looking up, the whole sky is squeezed into a <b>97°</b> cone (Snell’s window) because light can’t refract beyond the 48.6° critical angle. Outside it, the surface acts as a mirror.</p>` : ''}`;
+}
+function m3Inset(L, pf, C) {
+  const { ctx, w, h } = M3.inset, st = M3.st;
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  const ph = 158;
+  ctx.fillStyle = css(L.waterBg); ctx.fillRect(0, 0, w, ph);
+  // slate
+  const sw = Math.min(210, 150 / (0.35 + st.dist * 0.55)), sh = sw * 0.66;
+  const sx = w / 2 - sw / 2 - 40, sy = ph / 2 - sh / 2;
+  ctx.fillStyle = '#15191b'; ctx.fillRect(sx - 6, sy - 6, sw + 12, sh + 12);
+  L.patches.forEach((p, i) => {
+    const pw = sw / 3, pH = sh / 2;
+    ctx.fillStyle = css(p.rec);
+    ctx.fillRect(sx + (i % 3) * pw + 2, sy + (i < 3 ? 0 : pH) + 2, pw - 4, pH - 4);
+  });
+  // backscatter specks
+  if (st.strobe) {
+    const up = V(0, 1, 0), side = V(0, 0, 1);
+    pf.inFrame.forEach(v => {
+      const fwd = v.dot(pf.toT); if (fwd <= 0.05) return;
+      const x = (w / 2 - 40) + (v.dot(side) / fwd) / Math.tan(rad(21)) * 130, y = ph / 2 - (v.dot(up) / fwd) / Math.tan(rad(21)) * 130;
+      const r = clamp(2.4 / fwd, 0.8, 7);
+      const grd = ctx.createRadialGradient(x, y, 0, x, y, r);
+      grd.addColorStop(0, 'rgba(255,250,235,.95)'); grd.addColorStop(1, 'rgba(255,250,235,0)');
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+  // spectrum bars
+  const bx = w - 96, bw = 11, bh = 110, by = 24;
+  ctx.fillStyle = 'rgba(10,18,21,.82)'; ctx.fillRect(bx - 10, 8, 104, ph - 16);
+  ctx.fillStyle = 'rgba(227,236,234,.85)'; ctx.font = '600 10px "JetBrains Mono", monospace';
+  ctx.fillText(`light @ ${st.depth} m`, bx - 4, 20);
+  L.E.forEach((v, i) => {
+    const x = bx + i * (bw + 2);
+    ctx.fillStyle = 'rgba(227,236,234,.12)'; ctx.fillRect(x, by, bw, bh);
+    ctx.fillStyle = WL_COL[i]; ctx.fillRect(x, by + bh * (1 - v), bw, bh * v);
+  });
+  ctx.fillStyle = 'rgba(227,236,234,.6)'; ctx.fillText('400', bx - 2, by + bh + 12); ctx.fillText('700', bx + 64, by + bh + 12);
+  // truth strip
+  ctx.fillStyle = '#0F1A1E'; ctx.fillRect(0, ph, w, h - ph);
+  ctx.fillStyle = 'rgba(227,236,234,.85)'; ctx.fillText('true colours (at surface)', 10, ph + 16);
+  L.patches.forEach((p, i) => { ctx.fillStyle = css(p.truth.map(v => v * 1.0)); ctx.fillRect(10 + i * 42, ph + 24, 38, 22); });
+  ctx.fillText(`${st.strobe ? 'strobe' : 'ambient'} · ${st.wb ? 'custom WB' : 'daylight WB'}`, 10, h - 8);
+}
+(function panelM3() {
+  const m = modShell(2, 'What water does to light', 'Sunlight enters the sea, bends, and loses its colours one by one. Put a colour slate at depth and see what the camera actually records.');
+  const g = groupBox(m, 'Controls');
+  segmented(g, { id: 'm3-water', label: 'Water type', value: 'coastal', options: [['ocean', 'Open ocean'], ['coastal', 'Coastal'], ['turbid', 'Turbid estuary']] }, v => { M3.st.water = v; m3Update(); });
+  slider(g, { id: 'm3-depth', label: 'Depth of slate and camera', min: 0, max: 40, step: 0.5, value: 12, fmt: v => v + ' m' }, v => { M3.st.depth = v; m3Update(); });
+  slider(g, { id: 'm3-dist', label: 'Camera-to-slate distance', min: 0.3, max: 5, step: 0.1, value: 1.5, fmt: v => fmtDist(v) }, v => { M3.st.dist = v; m3Update(); });
+  slider(g, { id: 'm3-sun', label: 'Sun height above horizon', min: 5, max: 90, step: 1, value: 55, fmt: v => v + '°' }, v => { M3.st.sun = v; m3Update(); });
+  toggle(g, { id: 'm3-strobe', label: 'Strobe on', value: false }, v => { M3.st.strobe = v; m3Update(); });
+  segmented(g, { id: 'm3-arms', label: 'Strobe position', value: 'close', options: [['close', 'Beside the lens'], ['wide', 'Out on arms']] }, v => { M3.st.arms = v; m3Update(); });
+  toggle(g, { id: 'm3-wb', label: 'Custom white balance', value: false }, v => { M3.st.wb = v; m3Update(); });
+  toggle(g, { id: 'm3-snell', label: "Show Snell's window", value: true }, v => { M3.st.snell = v; m3Update(); });
+  M3.inset = insetBox(m, 'What the camera records', 360, 220, 'Auto-exposure on. Kd values are approximate, after Jerlov water types.');
+  const r = el('dl', { class: 'readouts' }); m.appendChild(r); M3.readEl = r;
+  const t = el('div', { class: 'talk' }); t.appendChild(el('p', { class: 'eyebrow' }, 'Say it in class'));
+  M3.talkEl = el('div'); t.appendChild(M3.talkEl); m.appendChild(t);
+  M3.views = { side: { t: V(-1, -9.5, 0), r: 44, az: 0, el: 0.02 }, d3: { t: V(-1, -9, 0), r: 44, az: -0.5, el: 0.2 } };
+})();
+
+/* =====================================================================
+   WORKSHEETS — tabs 2 and 3. Answers use the numbers this lab displays.
+   ===================================================================== */
+const WORKSHEETS = {
+  1: {
+    title: 'Worksheet: behind the port',
+    note: 'Set the controls as each question says, then read the numbers off the readouts under the viewfinder.',
+    items: [
+      {
+        set: 'Air · Flat port · Fish 1.00 m · Lens 94°',
+        q: 'Record the apparent distance and apparent size. Now switch the housing to <em>Water</em> and record both again. Use Snell’s law to explain what changed.',
+        a: 'In air: 1.00 m and 100%. In water: about <b>76 cm</b> and <b>134%</b>. Light leaving water (n ≈ 1.33) for air bends away from the normal at the port. Traced back, the rays meet about ¾ of the way to the fish, so it looks closer and roughly a third bigger.'
+      },
+      {
+        set: 'Water · Flat port · Fish 2.00 m',
+        q: 'Predict the apparent distance with <em>apparent ≈ real ÷ 1.33</em>, then check it on the slider. Why is the lab’s value slightly larger than your prediction?',
+        a: '2.00 ÷ 1.333 ≈ <b>1.50 m</b>, and the lab shows <b>1.51 m</b>. The last 3.5 cm between the port and the lens is air, and that part of the path isn’t shortened. Only the water path is divided by n.'
+      },
+      {
+        set: 'Water · Flat port · Lens 94°, then 130°',
+        q: 'Record the angle of view underwater for each lens. Show the working for the 94° lens using 2 × sin⁻¹(sin(θ/2) ÷ 1.333). What is the widest view a flat port can ever give?',
+        a: 'sin 47° = 0.731; ÷ 1.333 = 0.549; sin⁻¹ = 33.3°; × 2 = <b>66.5°</b> (the readout rounds it to 67°). The 130° lens gives <b>86°</b>. As the lens approaches 180°, sin(θ/2) → 1, so the limit is 2 × sin⁻¹(1/1.333) = <b>97.2°</b>. That is the same angle as Snell’s window in tab 3.'
+      },
+      {
+        set: 'Water · Flat port · Colour splitting on · Lens 60°, 94°, 130°',
+        q: 'Which is bent more by the port, red or blue light? Record the colour fringe at the frame edge for each lens. Why is the centre of the frame unaffected?',
+        a: '<b>Blue</b> bends more, because water’s refractive index is higher for blue (≈ 1.340) than for red (≈ 1.331). Fringes are about <b>26 px</b> (60°), <b>41 px</b> (94°) and <b>110 px</b> (130°) on a 6000 px sensor. On the axis, light meets the port square-on, so it isn’t bent and the colours don’t separate. Dispersion grows with the angle of incidence toward the edges.'
+      },
+      {
+        set: 'Water · Dome port · Radius 10 cm · Fish 1.00 m · Lens 94°',
+        q: 'Record the angle of view, apparent size and apparent distance. Why does a dome keep the full angle of view? Where must the lens focus?',
+        a: '<b>94°</b>, <b>100%</b>, <b>31 cm</b>. The dome is centred on the lens’s entrance pupil, so rays heading for the lens cross the glass at right angles and don’t bend. The curved water–air surface still acts as a weak diverging lens. It forms a virtual image about 31 cm away at about 31% of the fish’s real size, so the angular size is unchanged. The lens must focus on that virtual image at about 0.31 m, not at 1 m.'
+      },
+      {
+        set: 'Water · Dome port · Fish 1.00 m · Radius 4 cm, then 12 cm',
+        q: 'How does the virtual image distance change with dome size? Your lens can only focus down to 0.25 m. Which dome needs a close-up dioptre?',
+        a: '4 cm dome: <b>14 cm</b>. 12 cm dome: <b>35 cm</b>. Bigger domes push the virtual image further out. The 4 cm dome’s image is closer than 0.25 m, so it needs a dioptre (the lab flags it). The 10 cm and 12 cm domes are fine. Larger domes also give sharper corners, because the curved virtual image sits further from the lens.'
+      },
+      {
+        set: 'Planning',
+        q: 'You have two dives: photographing a 3 cm nudibranch, then a wide view of a seagrass meadow with a diver in it. Choose a port for each and justify it using what you measured.',
+        a: '<b>Nudibranch: flat port</b> with a macro lens. The angle of view is narrow, so edge distortion and colour fringing barely matter, and the extra ~33% magnification helps. <b>Seagrass scene: dome port</b> with a wide-angle lens. It keeps the full angle of view with little distortion or fringing. Focus on the virtual image, adding a dioptre if the lens can’t focus close enough.'
+      },
+      {
+        set: 'Thinking about divers',
+        q: 'A diver’s mask is a flat port. Using Q1, explain why divers often reach short of an object, and why fish look bigger to divers than they really are.',
+        a: 'Through the mask everything appears at about <b>¾ of its real distance</b>. A diver reaches for where the object seems to be and stops short of it. The same refraction enlarges the angle an object fills by about <b>a third</b>, so fish look bigger than they are.'
+      }
+    ]
+  },
+  2: {
+    title: 'Worksheet: light in water',
+    note: 'Set the controls as each question says. Use the readouts, the spectrum bars in the camera view and the 3D column.',
+    items: [
+      {
+        set: 'Sun 55°, then sun 10°',
+        q: 'Record the percentage of sunlight reflected at the surface for each sun height. Use this to explain why dawn and dusk dives are darker, even in clear water.',
+        a: '<b>2.3%</b> at 55°, <b>34.8%</b> at 10°. Low sunlight meets the surface at a grazing angle, so far more is reflected (Fresnel reflection). About a third never enters the water. What does enter is also spread over a larger area of sea surface.'
+      },
+      {
+        set: 'Sun 30°',
+        q: 'At what angle from the vertical does the refracted sunlight travel? What is the largest this angle can ever be, and what does that mean for where underwater light comes from?',
+        a: 'About <b>41°</b> (40.5°). Even with the sun on the horizon, light can only bend to the critical angle, <b>48.6°</b>. All daylight underwater arrives within 48.6° of vertical, so it always comes from above.'
+      },
+      {
+        set: 'Snell’s window on · Depth 10 m, then 20 m',
+        q: 'Snell’s window is always 97° wide. Calculate its radius on the surface at 10 m and at 20 m (radius = depth × tan 48.6°). What does a diver see outside the window?',
+        a: '<b>11.3 m</b> at 10 m and <b>22.7 m</b> at 20 m. The radius doubles when the depth doubles, but the angle stays 97°. Outside the window the surface acts as a mirror (total internal reflection) and shows the underwater scene. The 97° is the same limit found for a flat port in tab 2, Q3.'
+      },
+      {
+        set: 'Coastal water · Depth 5, 10, 20 m',
+        q: 'Complete a table of the percentage of red (650 nm), green (550 nm) and blue (450 nm) light left at each depth. Which colour disappears first, and which gets furthest?',
+        a: '5 m: red <b>14%</b>, green <b>61%</b>, blue <b>55%</b>. 10 m: <b>1.8%</b>, <b>37%</b>, <b>30%</b>. 20 m: <b>0.03%</b>, <b>14%</b>, <b>9.1%</b>. Red goes first (down to 10% by 5.8 m). In coastal water green gets furthest, just ahead of blue.'
+      },
+      {
+        set: 'Depth 5 m · Open ocean, coastal, turbid estuary',
+        q: 'Using the spectrum bars, find the most abundant colour at 5 m in each water type, and the depth where red falls to 10%. Why do coastal and estuarine waters look green or brown rather than blue?',
+        a: 'Open ocean: <b>blue</b> (~450 nm); red falls to 10% by <b>6.4 m</b>. Coastal: <b>blue-green</b> (~500 nm), <b>5.8 m</b>. Turbid estuary: <b>green-yellow</b> (~550 nm), <b>2.7 m</b>. Pure water absorbs red. Dissolved organic matter (CDOM) and phytoplankton also absorb blue, and suspended sediment scatters light, so the window of best transmission shifts from blue toward green and yellow.'
+      },
+      {
+        set: 'Coastal · Depth 10 m · Strobe off · Camera 0.5 m, then 4 m',
+        q: 'Compare the recorded colour slate at the two distances. The depth hasn’t changed, so why are the colours worse from 4 m?',
+        a: 'Light reflected by the slate has to travel horizontally to the camera, and water absorbs red along that path too. The total water path is the depth plus the camera distance. At 4 m an extra e^(−0.40 × 4) ≈ <b>20%</b> of the remaining red survives, so reds turn grey-blue. Hence the rule: get close.'
+      },
+      {
+        set: 'Coastal · Depth 20 m · Strobe on, beside the lens · Camera 0.5, 1.5, 4 m',
+        q: 'What happens to the red patch as the camera moves away? Strobe light goes to the slate and back. Using Kd(650) ≈ 0.40 m⁻¹, calculate how much red survives the round trip at 0.5 m and 4 m.',
+        a: '0.5 m: e^(−0.40 × 1) ≈ <b>67%</b>. 1.5 m: ≈ <b>30%</b>. 4 m: e^(−0.40 × 8) ≈ <b>4%</b>. The inverse-square law makes it worse: at 4 m the strobe delivers about 1/64 of the light it gives at 0.5 m. The red patch is red close up and loses its colour at 4 m, so strobes only restore colour within a metre or two.'
+      },
+      {
+        set: 'Turbid estuary · Strobe on · Camera 1.5 m · Beside the lens, then out on arms · Repeat at 3 m',
+        q: 'Record the backscatter specks in frame for each set-up. Explain why moving the strobe changes the count, and why getting closer helps too.',
+        a: 'At 1.5 m: <b>16 → 4</b> specks. At 3 m: <b>67 → 26</b>. Beside the lens, the beam lights particles right in front of the lens, and these appear large and bright in the frame. On long arms, angled outward, only the edge of the beam crosses the lens’s view, near the subject, so far fewer particles are lit. A shorter distance also means less water, and fewer particles, between lens and subject.'
+      },
+      {
+        set: 'Coastal · Strobe off · Camera 1.5 m · Depth 15 m, then 30 m · Custom white balance on/off',
+        q: 'Which patches does custom white balance improve at 15 m? Why can’t it bring back the red patch at 30 m?',
+        a: 'At 15 m it makes the white patch neutral and partly restores warm colours by amplifying the weak red channel. At 30 m almost no red light is left: e^(−0.40 × 30) ≈ 0.0006% at 650 nm, before the extra path to the camera. Amplifying almost nothing gives almost nothing, and in a real camera, noise. The lab caps the gain at 8×. Only adding light, with a strobe, brings red back.'
+      }
+    ]
+  }
+};
+const stripTags = h => h.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
+function buildWorksheet(modIndex) {
+  const ws = WORKSHEETS[modIndex], mod = document.getElementById('mod-' + modIndex);
+  const sec = el('section', { class: 'ws', id: 'ws-' + modIndex, 'aria-labelledby': `ws-${modIndex}-h` });
+  sec.innerHTML = `
+    <div class="ws-head">
+      <h3 id="ws-${modIndex}-h">${ws.title}</h3>
+      <div class="ws-actions">
+        <button type="button" class="vbtn" id="ws-${modIndex}-ans" aria-pressed="false">Show model answers</button>
+        <button type="button" class="vbtn" id="ws-${modIndex}-copy">Copy questions</button>
+      </div>
+    </div>
+    <p class="ws-note">${ws.note}</p>
+    <ol class="ws-list">${ws.items.map(it => `
+      <li><span class="set">${it.set}</span><p class="q">${it.q}</p>
+        <div class="ans" hidden><span class="ans-l">Model answer</span>${it.a}</div></li>`).join('')}
+    </ol>
+    <textarea class="ws-copy" id="ws-${modIndex}-text" readonly hidden aria-label="Worksheet questions as text"></textarea>`;
+  mod.appendChild(sec);
+  const jump = el('button', { type: 'button', class: 'jump', id: `ws-${modIndex}-jump` }, 'Worksheet ↓');
+  jump.addEventListener('click', () => sec.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }));
+  mod.firstElementChild.appendChild(jump);
+  const ansBtn = sec.querySelector(`#ws-${modIndex}-ans`);
+  ansBtn.addEventListener('click', () => {
+    const on = ansBtn.getAttribute('aria-pressed') !== 'true';
+    ansBtn.setAttribute('aria-pressed', String(on));
+    ansBtn.textContent = on ? 'Hide model answers' : 'Show model answers';
+    sec.querySelectorAll('.ans').forEach(a => { a.hidden = !on; });
+  });
+  const text = `${ws.title}\n${ws.note}\n\n` + ws.items.map((it, i) => `${i + 1}. [${stripTags(it.set)}] ${stripTags(it.q)}`).join('\n\n');
+  const copyBtn = sec.querySelector(`#ws-${modIndex}-copy`), ta = sec.querySelector('textarea');
+  copyBtn.addEventListener('click', () => {
+    const done = () => { copyBtn.textContent = 'Copied'; setTimeout(() => { copyBtn.textContent = 'Copy questions'; }, 1600); };
+    const fallback = () => { ta.value = text; ta.hidden = false; ta.focus(); ta.select(); copyBtn.textContent = 'Select all and copy'; };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+  });
+}
+buildWorksheet(1);
+buildWorksheet(2);
+/* ---------- module switching ---------- */
+const MODS = [
+  { m: M1, update: m1Update, views: () => M1.views },
+  { m: M2, update: m2Update, views: () => M2.viewsFn() },
+  { m: M3, update: m3Update, views: () => M3.views }
+];
+let active = 0;
+const scaleNote = document.getElementById('scalenote');
+function setMod(i, instant) {
+  active = i;
+  MODS.forEach((o, k) => { o.m.group.visible = o.m.ov.visible = k === i; document.getElementById('mod-' + k).hidden = k !== i; });
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(+t.dataset.mod === i)));
+  orb.azLim = i === 2 ? 1.2 : null;
+  if (i === 0) M1.env();
+  MODS[i].update();
+  scaleNote.textContent = MODS[i].m.scale;
+  goTo(MODS[i].views().d3, instant);
+  panel.scrollTop = 0;
+  try { localStorage.setItem('optics-bench-tab', String(i)); } catch (e) { /* storage unavailable */ }
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setMod(+t.dataset.mod)));
+document.getElementById('v-side').addEventListener('click', () => goTo(MODS[active].views().side));
+document.getElementById('v-3d').addEventListener('click', () => goTo(MODS[active].views().d3));
+MODS.forEach(o => o.update());
+let start = 0;
+try { const s = parseInt(localStorage.getItem('optics-bench-tab'), 10); if (s >= 0 && s <= 2) start = s; } catch (e) { /* ignore */ }
+const hashMap = { focus: 0, port: 1, light: 2 };
+if (location.hash.slice(1) in hashMap) start = hashMap[location.hash.slice(1)];
+setMod(start, true);
+
+/* ---------- loop ---------- */
+let lastW = 0, lastH = 0;
+const clock = new THREE.Clock();
+function frame() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (w !== lastW || h !== lastH) {
+    renderer.setSize(w, h, false); cam.aspect = w / Math.max(h, 1); cam.updateProjectionMatrix();
+    ensureTargets(w, h); lastW = w; lastH = h;
+  }
+  if (orb.goal) {
+    const g = orb.goal, k = 0.12;
+    orb.t.lerp(g.t, k); orb.r += (g.r - orb.r) * k; orb.az += (g.az - orb.az) * k; orb.el += (g.el - orb.el) * k;
+    if (Math.abs(g.r - orb.r) < 0.01 && Math.abs(g.az - orb.az) < 0.001 && orb.t.distanceTo(g.t) < 0.01) orb.goal = null;
+  }
+  applyOrbit();
+  const t = reduceMotion ? 0 : clock.getElapsedTime();
+  UW.uTime.value = t;
+  WAG.forEach(o => { o.pivot.rotation.y = Math.sin(t * o.speed + o.phase) * o.amp; });
+  if (active === 2) M3.fish.forEach(o => {
+    const a = o.ph + t * o.w;
+    o.f.position.set(o.c.x + Math.cos(a) * o.R, o.c.y + Math.sin(a * 2.3) * 0.08, o.c.z + Math.sin(a) * o.R * 0.6);
+    o.f.rotation.y = Math.atan2(-Math.cos(a) * o.R * 0.6, -Math.sin(a) * o.R);
+  });
+  if (envDirty && performance.now() - envAt > 150) rebuildEnv();
+  renderFrame();
+  placeLabels(w, h);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
