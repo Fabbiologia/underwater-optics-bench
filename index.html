@@ -133,6 +133,9 @@
   .ans b { color: var(--good); font-weight: 600; }
   .ans-l { display: block; margin-bottom: 4px; font: 600 11px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--good); }
   .ws-copy { width: 100%; min-height: 160px; font: 13px/1.45 var(--mono); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+  .ticks { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-top: 1px; font: 500 11.5px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .credit { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+  .credit a { color: var(--muted); }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
   @media (max-width: 900px) {
@@ -608,6 +611,78 @@ function makeRock(size, seed, color = '#6d6a60') {
   return shadowy(m);
 }
 
+/* rounded box: w along x, h along y, d along z, centred */
+function roundBox(w, h, d, r) {
+  const s = new THREE.Shape(), x = w / 2 - r, y = h / 2 - r;
+  s.moveTo(-x, -h / 2); s.lineTo(x, -h / 2); s.quadraticCurveTo(w / 2, -h / 2, w / 2, -y); s.lineTo(w / 2, y); s.quadraticCurveTo(w / 2, h / 2, x, h / 2);
+  s.lineTo(-x, h / 2); s.quadraticCurveTo(-w / 2, h / 2, -w / 2, y); s.lineTo(-w / 2, -y); s.quadraticCurveTo(-w / 2, -h / 2, -x, -h / 2);
+  const b = Math.min(r * 0.6, d / 3);
+  const g = new THREE.ExtrudeGeometry(s, { depth: d - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b * 0.8, bevelSegments: 3, curveSegments: 10 });
+  g.translate(0, 0, -(d - 2 * b) / 2);
+  return g;
+}
+const onX = m => { m.rotation.z = Math.PI / 2; return m; };
+/* ribbed rubber for focus and zoom rings */
+const RIBS = canvasTex(64, 8, (ctx, w, h) => {
+  ctx.fillStyle = '#2a2d30'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#121416'; for (let i = 0; i < 16; i++) ctx.fillRect(i * 4, 0, 2, h);
+}, true, [24, 1]);
+/* mirrorless camera and lens, facing -x, lens front at x = lensFront; units are 10 cm */
+function makeCameraBody(extra = {}) {
+  const g = new THREE.Group();
+  const M = (c, r, m, o = {}) => stdMat(c, r, m, Object.assign({}, extra, o));
+  const bodyMat = M('#1c1f22', 0.62, 0.15), rubber = M('#141517', 0.9, 0), metal = M('#9aa1a6', 0.3, 1), dark = M('#0d0f10', 0.4, 0.5);
+  const body = new THREE.Mesh(roundBox(1.3, 0.9, 0.55, 0.12), bodyMat); body.rotation.y = Math.PI / 2; body.position.set(1.5, 0, 0); g.add(body);
+  const grip = new THREE.Mesh(roundBox(0.36, 0.86, 0.34, 0.12), rubber); grip.rotation.y = Math.PI / 2; grip.position.set(1.3, -0.02, -0.52); g.add(grip);
+  const evf = new THREE.Mesh(roundBox(0.46, 0.3, 0.42, 0.07), bodyMat); evf.rotation.y = Math.PI / 2; evf.position.set(1.55, 0.52, 0.05); g.add(evf);
+  const dial = onX(new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.07, 28), metal)); dial.rotation.set(0, 0, 0); dial.position.set(1.62, 0.49, -0.38); g.add(dial);
+  const shutter = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 20), metal); shutter.position.set(1.3, 0.47, -0.55); g.add(shutter);
+  const mount = onX(new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.05, 48, 1, true), metal)); mount.position.x = 1.22; g.add(mount);
+  const barrel = onX(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.43, 1.15, 48, 1, true), dark)); barrel.position.x = 0.62; g.add(barrel);
+  const focus = onX(new THREE.Mesh(new THREE.CylinderGeometry(0.445, 0.445, 0.3, 48, 1, true), M('#ffffff', 0.85, 0, { map: RIBS }))); focus.position.x = 0.5; g.add(focus);
+  const zoom = onX(new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.22, 48, 1, true), M('#ffffff', 0.85, 0, { map: RIBS }))); zoom.position.x = 0.92; g.add(zoom);
+  const nameRing = onX(new THREE.Mesh(new THREE.CylinderGeometry(0.405, 0.405, 0.04, 48, 1, true), metal)); nameRing.position.x = 0.09; g.add(nameRing);
+  const front = new THREE.Mesh(new THREE.CircleGeometry(0.34, 48), new THREE.MeshPhysicalMaterial(Object.assign({ color: lin('#1d3140'), roughness: 0.04, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.8 }, extra)));
+  front.rotation.y = -Math.PI / 2; front.position.x = 0.07; g.add(front);
+  return shadowy(g);
+}
+/* compact underwater rig for tab 3: housing, dome port with shade, tray, handles, ball mounts; faces -x */
+function makeUWRig() {
+  const g = new THREE.Group();
+  const W = m => uwify(m, false);
+  const alu = W(stdMat('#2c3338', 0.32, 0.85)), black = W(stdMat('#121416', 0.5, 0.4)), silver = W(stdMat('#b9c0c4', 0.3, 0.9)), grip = W(stdMat('#18191b', 0.92, 0));
+  const shell = new THREE.Mesh(roundBox(0.56, 0.42, 0.36, 0.1), alu); shell.rotation.y = Math.PI / 2; g.add(shell);
+  const portBase = onX(new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.2, 0.09, 40), black)); portBase.position.x = -0.22; g.add(portBase);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.17, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), glassMat(0.3, '#b9dbe6'));
+  dome.rotation.z = Math.PI / 2; dome.position.x = -0.26; g.add(dome);
+  for (let k = 0; k < 4; k++) {
+    const petal = new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.215, 0.16, 16, 1, true, k * Math.PI / 2 + 0.35, Math.PI / 2 - 0.7), W(stdMat('#121416', 0.5, 0.4, { side: THREE.DoubleSide })));
+    onX(petal); petal.position.x = -0.33; g.add(petal);
+  }
+  const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.2), W(new THREE.MeshPhysicalMaterial({ color: lin('#0a0f12'), roughness: 0.05, clearcoat: 1 })));
+  lcd.rotation.y = Math.PI / 2; lcd.position.set(0.186, 0.02, 0); g.add(lcd);
+  [[0.05, 0.18], [0.05, -0.18]].forEach(([x, z]) => { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.035, 20), silver); d.position.set(x, 0.225, z); g.add(d); });
+  const lever = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.03), silver); lever.position.set(0.02, 0.23, -0.25); lever.rotation.y = 0.4; g.add(lever);
+  const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.08), black); shoe.position.set(-0.05, 0.225, 0); g.add(shoe);
+  const tray = new THREE.Mesh(roundBox(0.14, 0.035, 0.98, 0.015), silver); tray.position.set(0.02, -0.245, 0); g.add(tray);
+  [0.46, -0.46].forEach(z => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 16), silver); post.position.set(0.02, -0.03, z); g.add(post);
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.26, 20), grip); sleeve.position.set(0.02, -0.08, z); g.add(sleeve);
+    const ball = new THREE.Mesh(UNIT_SPH, silver); ball.scale.setScalar(0.045); ball.position.set(0.02, 0.2, z); g.add(ball);
+  });
+  return shadowy(g);
+}
+/* strobe head: cylinder along +y (back), diffuser at -y (front) */
+function makeStrobeHead() {
+  const g = new THREE.Group();
+  const W = m => uwify(m, false);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.22, 32), W(stdMat('#26292c', 0.45, 0.5))); g.add(body);
+  const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.018, 12, 40), W(stdMat('#0f1112', 0.5, 0.4))); bezel.rotation.x = Math.PI / 2; bezel.position.y = -0.11; g.add(bezel);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.04, 32), W(stdMat('#b9c0c4', 0.3, 0.9))); cap.position.y = 0.13; g.add(cap);
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.012, 0.06), W(stdMat('#3a6f8f', 0.3, 0.2))); panel.position.set(0, 0.155, 0); g.add(panel);
+  return shadowy(g);
+}
+
 /* fish outline, unit length, nose at +x */
 function fishShape() {
   const s = new THREE.Shape();
@@ -623,54 +698,120 @@ function fishShape() {
   return s;
 }
 const FISH_PTS = fishShape().getPoints(10);
-/* 3D fish: tapered, laterally compressed body with countershading, forked tail and fins */
+/* 3D fish: tapered, laterally compressed body with a painted skin (countershading, scales,
+   lateral line, gill cover), ray-textured fins, glossy eyes, and a swimming wave in the shader */
 const fishP = t => Math.pow(Math.max(Math.sin(Math.PI * Math.pow(clamp(t, 0, 1), 1.36)), 0), 0.62);
-function fishBodyGeo(back, belly) {
-  const g = new THREE.SphereGeometry(0.5, 56, 28), p = g.attributes.position;
-  const col = new Float32Array(p.count * 3), cb = lin(back), cl = lin(belly);
+const FISH_GEO = (() => {
+  const g = new THREE.SphereGeometry(0.5, 64, 32), p = g.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
     const t = y + 0.5, rho = Math.hypot(x, z) || 1e-6;
     const cx = x / rho, cz = z / rho, P = fishP(t);
-    const H = 0.34 * P, W = 0.14 * P * (0.6 + 0.4 * t);
-    p.setXYZ(i, t - 0.5, cx * H, cz * W);
-    const m = THREE.MathUtils.smoothstep(cx, -0.45, 0.5);
-    col[i * 3] = cl.r + (cb.r - cl.r) * m; col[i * 3 + 1] = cl.g + (cb.g - cl.g) * m; col[i * 3 + 2] = cl.b + (cb.b - cl.b) * m;
+    const up = 0.25 * P, down = 0.2 * P + 0.035 * Math.sin(Math.PI * clamp(t * 1.15 - 0.1, 0, 1)) ** 2;
+    p.setXYZ(i, t - 0.5, cx > 0 ? cx * up : cx * down, cz * 0.14 * P * (0.6 + 0.4 * t));
   }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   g.computeVertexNormals();
   return g;
+})();
+const mixHex = (a, b, t) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString();
+/* skin texture: u runs round the body (0 and 1 belly, 0.5 back), rows run head (top) to tail */
+const SKIN = new Map();
+function fishSkin(pal) {
+  const key = [pal.back, pal.flank, pal.belly, pal.pattern, pal.accent].join('|');
+  if (SKIN.has(key)) return SKIN.get(key);
+  const Y = t => Math.acos(clamp(2 * t - 1, -1, 1)) / Math.PI;
+  const tex = canvasTex(512, 256, (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, 0, w, 0);
+    [[0, pal.belly], [0.18, pal.belly], [0.32, pal.flank], [0.5, pal.back], [0.68, pal.flank], [0.82, pal.belly], [1, pal.belly]].forEach(([o, c]) => g.addColorStop(o, c));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = pal.accent;
+    if (pal.pattern === 'bars') { ctx.globalAlpha = 0.32; [0.64, 0.52, 0.4, 0.28].forEach(t => ctx.fillRect(w * 0.29, Y(t) * h - 6, w * 0.42, 12)); }
+    if (pal.pattern === 'spots') { srand(7); ctx.globalAlpha = 0.42; for (let i = 0; i < 80; i++) { const u = 0.26 + rnd() * 0.48, t = 0.12 + rnd() * 0.66; ctx.beginPath(); ctx.arc(u * w, Y(t) * h, 1.6 + rnd() * 2.6, 0, 7); ctx.fill(); } }
+    if (pal.pattern === 'stripe') { ctx.globalAlpha = 0.55; [0.36, 0.64].forEach(u => ctx.fillRect(u * w - 6, Y(0.8) * h, 12, (Y(0.06) - Y(0.8)) * h)); }
+    ctx.globalAlpha = 1; ctx.lineWidth = 1;
+    for (let r = 0; r * 7 < h; r++) for (let c = 0; c * 9 < w + 9; c++) {
+      const x = c * 9 + (r % 2) * 4.5, y = r * 7;
+      if (y < Y(0.74) * h) continue;
+      ctx.strokeStyle = 'rgba(0,0,0,.13)'; ctx.beginPath(); ctx.arc(x, y, 5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.beginPath(); ctx.arc(x, y - 1.2, 5, 0.25 * Math.PI, 0.75 * Math.PI); ctx.stroke();
+    }
+    const hg = ctx.createLinearGradient(0, 0, 0, Y(0.7) * h);
+    hg.addColorStop(0, 'rgba(0,0,0,.3)'); hg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = hg; ctx.fillRect(0, 0, w, Y(0.7) * h);
+    ctx.strokeStyle = 'rgba(0,0,0,.38)'; ctx.lineWidth = 2.2;
+    [0.25, 0.75].forEach(u => { const y0 = Y(0.74) * h; ctx.beginPath(); ctx.moveTo((u - 0.16) * w, y0 - 4); ctx.quadraticCurveTo(u * w, y0 + 14, (u + 0.16) * w, y0 - 4); ctx.stroke(); });
+    ctx.strokeStyle = 'rgba(0,0,0,.26)'; ctx.lineWidth = 1.6;
+    [0.34, 0.66].forEach(u => { ctx.beginPath(); ctx.moveTo(u * w, Y(0.73) * h); ctx.quadraticCurveTo((u + (u < 0.5 ? 0.03 : -0.03)) * w, Y(0.4) * h, u * w, Y(0.05) * h); ctx.stroke(); });
+    const sg = ctx.createLinearGradient(0, 0, w, 0);
+    sg.addColorStop(0, 'rgba(255,255,255,.28)'); sg.addColorStop(0.17, 'rgba(255,255,255,0)'); sg.addColorStop(0.83, 'rgba(255,255,255,0)'); sg.addColorStop(1, 'rgba(255,255,255,.28)');
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, w, h);
+  }, true);
+  SKIN.set(key, tex);
+  return tex;
 }
-const finGeo = (build, depth = 0.012) => {
+/* fins carry fine rays; vertical rays for dorsal/anal/pelvic, horizontal for tail/pectoral */
+const FIN_TEX = (() => {
+  const make = vertical => canvasTex(128, 128, (ctx, w, h) => {
+    ctx.fillStyle = '#dcdcdc'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(30,30,30,.5)'; ctx.lineWidth = 1.4;
+    for (let i = 0; i < 12; i++) {
+      const p = (i + 0.5) / 12 * w;
+      ctx.beginPath();
+      if (vertical) { ctx.moveTo(p, 0); ctx.lineTo(p, h); } else { ctx.moveTo(0, p); ctx.lineTo(w, p); }
+      ctx.stroke();
+    }
+  }, true, [5, 5]);
+  return { v: make(true), h: make(false) };
+})();
+const finGeo = (build, depth = 0.01) => {
   const s = new THREE.Shape(); build(s);
-  const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1, curveSegments: 12 });
+  const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 1, curveSegments: 14 });
   g.translate(0, 0, -depth / 2); return g;
 };
 const FIN = {
-  tail: finGeo(s => { s.moveTo(0.02, 0); s.quadraticCurveTo(-0.09, 0.08, -0.25, 0.25); s.quadraticCurveTo(-0.17, 0.03, -0.19, 0); s.quadraticCurveTo(-0.17, -0.03, -0.25, -0.25); s.quadraticCurveTo(-0.09, -0.08, 0.02, 0); }),
-  dorsal: finGeo(s => { s.moveTo(-0.2, 0.2); s.lineTo(0.16, 0.28); s.quadraticCurveTo(0.0, 0.33, -0.12, 0.46); s.quadraticCurveTo(-0.15, 0.32, -0.2, 0.2); }),
-  anal: finGeo(s => { s.moveTo(-0.26, -0.13); s.lineTo(-0.04, -0.2); s.quadraticCurveTo(-0.14, -0.26, -0.3, -0.3); s.quadraticCurveTo(-0.27, -0.2, -0.26, -0.13); }),
-  pec: finGeo(s => { s.moveTo(0, 0); s.quadraticCurveTo(-0.06, 0.05, -0.16, 0.02); s.quadraticCurveTo(-0.08, -0.04, 0, 0); }, 0.008)
+  tail: finGeo(s => { s.moveTo(0.02, 0); s.quadraticCurveTo(-0.09, 0.07, -0.25, 0.21); s.quadraticCurveTo(-0.17, 0.03, -0.19, 0); s.quadraticCurveTo(-0.17, -0.03, -0.25, -0.21); s.quadraticCurveTo(-0.09, -0.07, 0.02, 0); }).translate(-0.45, 0, 0),
+  dorsal: finGeo(s => { s.moveTo(-0.08, 0.2); s.lineTo(0.2, 0.22); s.quadraticCurveTo(0.12, 0.28, 0.02, 0.37); s.quadraticCurveTo(-0.04, 0.3, -0.08, 0.2); }),
+  dorsal2: finGeo(s => { s.moveTo(-0.32, 0.11); s.lineTo(-0.06, 0.21); s.quadraticCurveTo(-0.12, 0.3, -0.2, 0.29); s.quadraticCurveTo(-0.3, 0.23, -0.32, 0.11); }),
+  anal: finGeo(s => { s.moveTo(-0.3, -0.1); s.lineTo(-0.1, -0.19); s.quadraticCurveTo(-0.16, -0.28, -0.28, -0.26); s.quadraticCurveTo(-0.32, -0.18, -0.3, -0.1); }),
+  pelvic: finGeo(s => { s.moveTo(0.16, -0.2); s.lineTo(0.06, -0.225); s.quadraticCurveTo(0.05, -0.31, 0.0, -0.35); s.quadraticCurveTo(0.1, -0.29, 0.16, -0.2); }),
+  pec: finGeo(s => { s.moveTo(0, 0); s.quadraticCurveTo(-0.07, 0.06, -0.18, 0.02); s.quadraticCurveTo(-0.09, -0.05, 0, 0); }, 0.008)
 };
+/* swimming: a travelling wave bends the body and fins, growing toward the tail */
+function addSwim(mat, swim) {
+  const base = mat.onBeforeCompile, bk = mat.customProgramCacheKey();
+  mat.onBeforeCompile = sh => {
+    base.call(mat, sh);
+    Object.assign(sh.uniforms, { uTime: UW.uTime, uSwimAmp: swim.amp, uSwimPhase: swim.phase, uSwimFreq: swim.freq });
+    sh.vertexShader = 'uniform float uTime; uniform float uSwimAmp; uniform float uSwimPhase; uniform float uSwimFreq;\n' +
+      sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float swimEnv = pow(clamp((0.32 - transformed.x) / 0.95, 0.0, 1.0), 1.5);
+      transformed.z += uSwimAmp * swimEnv * sin(uSwimFreq * uTime + uSwimPhase - transformed.x * 5.5);`);
+  };
+  mat.customProgramCacheKey = () => 'swim|' + bk;
+  return mat;
+}
 const WAG = [];
 function makeFish(o) {
   const { back, belly = '#f4efe2', opacity = 1, water = false } = o;
+  const pal = { back, flank: o.flank || mixHex(back, belly, 0.35), belly, pattern: o.pattern || 'none', accent: o.accent || back };
+  const swim = { amp: { value: o.wag === 0 ? 0 : (o.swim === undefined ? 0.07 : o.swim) }, phase: { value: o.phase === undefined ? Math.random() * 6.28 : o.phase }, freq: { value: o.freq || 6.5 + Math.random() * 1.5 } };
   const grp = new THREE.Group();
   const tr = opacity < 1 ? { transparent: true, opacity, depthWrite: false } : {};
   const wrap = m => water ? uwify(m, false) : m;
-  const bodyMat = wrap(new THREE.MeshPhysicalMaterial(Object.assign({ vertexColors: true, roughness: 0.5, metalness: 0.02, clearcoat: 0.2, clearcoatRoughness: 0.35, envMapIntensity: 0.45 }, tr)));
-  const finMat = wrap(stdMat(back, 0.6, 0.02, Object.assign({ transparent: true, opacity: 0.93 * opacity, side: THREE.DoubleSide, depthWrite: false })));
-  grp.add(new THREE.Mesh(fishBodyGeo(back, belly), bodyMat));
-  const pivot = new THREE.Group(); pivot.position.x = -0.45; grp.add(pivot);
-  pivot.add(new THREE.Mesh(FIN.tail, finMat));
-  grp.add(new THREE.Mesh(FIN.dorsal, finMat), new THREE.Mesh(FIN.anal, finMat));
+  const bodyMat = addSwim(wrap(new THREE.MeshPhysicalMaterial(Object.assign({ map: fishSkin(pal), roughness: 0.42, metalness: 0.12, clearcoat: 0.45, clearcoatRoughness: 0.28, envMapIntensity: 0.55 }, tr))), swim);
+  const finCol = mixHex(pal.back, pal.flank, 0.5);
+  const finMat = tex => addSwim(wrap(stdMat(finCol, 0.6, 0.02, { map: tex, transparent: true, opacity: 0.9 * opacity, side: THREE.DoubleSide, depthWrite: false })), swim);
+  const vFin = finMat(FIN_TEX.v), hFin = finMat(FIN_TEX.h);
+  grp.add(new THREE.Mesh(FISH_GEO, bodyMat));
+  grp.add(new THREE.Mesh(FIN.tail, hFin), new THREE.Mesh(FIN.dorsal, vFin), new THREE.Mesh(FIN.dorsal2, vFin), new THREE.Mesh(FIN.anal, vFin), new THREE.Mesh(FIN.pelvic, vFin));
+  const irisMat = wrap(stdMat('#d9b34a', 0.25, 0.3, tr));
+  const pupilMat = wrap(new THREE.MeshPhysicalMaterial(Object.assign({ color: lin('#030405'), roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }, tr)));
   [1, -1].forEach(sz => {
-    const pec = new THREE.Mesh(FIN.pec, finMat); pec.position.set(0.18, -0.06, 0.09 * sz); pec.rotation.set(0, -0.5 * sz, -0.35); grp.add(pec);
-    const eye = new THREE.Mesh(UNIT_SPH, wrap(stdMat('#e2cf8e', 0.3, 0.1, tr))); eye.scale.setScalar(0.038); eye.position.set(0.33, 0.06, 0.088 * sz); grp.add(eye);
-    const pupil = new THREE.Mesh(UNIT_SPH, wrap(stdMat('#050607', 0.08, 0, tr))); pupil.scale.setScalar(0.024); pupil.position.set(0.345, 0.062, 0.113 * sz); grp.add(pupil);
+    const pec = new THREE.Mesh(FIN.pec, hFin); pec.position.set(0.19, -0.06, 0.1 * sz); pec.rotation.set(0, 0.35 * sz, 0.3); grp.add(pec);
+    const eye = new THREE.Mesh(UNIT_SPH, irisMat); eye.scale.setScalar(0.038); eye.position.set(0.33, 0.05, 0.075 * sz); grp.add(eye);
+    const pupil = new THREE.Mesh(UNIT_SPH, pupilMat); pupil.scale.setScalar(0.024); pupil.position.set(0.342, 0.052, 0.1 * sz); grp.add(pupil);
   });
   grp.userData.bodyMat = bodyMat;
-  WAG.push({ pivot, phase: Math.random() * 6.28, speed: 5 + Math.random() * 2, amp: o.wag === undefined ? 0.28 : o.wag });
   return opacity < 1 ? grp : shadowy(grp);
 }
 function drawFish2D(ctx, cx, cy, len, flip = 1) {
@@ -786,9 +927,9 @@ const M1 = {
   group: new THREE.Group(), dyn: new THREE.Group(),
   st: { f: 50, Ni: 2, focus: 1.2, show: 'all' },
   subjects: [
-    { key: 'near', name: 'Near fish', d: 0.5, y: 0.7, color: '#FF7A59' },
-    { key: 'mid', name: 'Middle fish', d: 1.2, y: -0.05, color: '#F2D15A' },
-    { key: 'far', name: 'Far fish', d: 3.0, y: -0.78, color: '#6FC8F5' }
+    { key: 'near', name: 'Near fish', d: 0.5, y: 0.7, color: '#FF7A59', skin: { back: '#D9542E', flank: '#FF7A59', belly: '#FFE3D6', pattern: 'bars', accent: '#7E2410' } },
+    { key: 'mid', name: 'Middle fish', d: 1.2, y: -0.05, color: '#F2D15A', skin: { back: '#C9A21E', flank: '#F2D15A', belly: '#FFF7DA', pattern: 'stripe', accent: '#35578F' } },
+    { key: 'far', name: 'Far fish', d: 3.0, y: -0.78, color: '#6FC8F5', skin: { back: '#2C7FB8', flank: '#6FC8F5', belly: '#EAF7FF', pattern: 'spots', accent: '#1B4F78' } }
   ],
   scale: 'Not to scale · object distances compressed, image side stretched ×12 so millimetre focus shifts are visible'
 };
@@ -851,7 +992,7 @@ function opticPost(g, x, yTop, base = -2.42) {
   const sPost = new THREE.Group(); M1.sensor.add(sPost); opticPost(sPost, 0.12, -1.6);
   // fish on posts
   M1.subjects.forEach(s => {
-    const f = makeFish({ back: s.color, belly: '#f3efe6', wag: 0 }); const x = xObj(s.d);
+    const f = makeFish(Object.assign({ wag: 0 }, s.skin)); const x = xObj(s.d);
     f.scale.setScalar(1.25); f.position.set(x, s.y, 0); f.rotation.y = -0.35;
     g.add(f); s.mesh = f;
     opticPost(g, x, s.y - 0.18);
@@ -1057,8 +1198,8 @@ function makeSeagrass(count, area, len, seed) {
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   M2.wetOv.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: lin('#cfe9ee'), map: SPRITE, size: 0.09, transparent: true, opacity: 0.55, depthWrite: false })));
   // fish and its virtual image
-  M2.fish = makeFish({ back: '#E8B923', belly: '#FFF6D2', water: true }); M2.fish.scale.setScalar(4); M2.fish.rotation.y = Math.PI / 2 - 0.75; g.add(M2.fish);
-  M2.ghost = makeFish({ back: '#F2D15A', opacity: 0.3 }); M2.ghost.rotation.y = Math.PI / 2 - 0.75; M2.ov.add(M2.ghost);
+  M2.fish = makeFish({ back: '#C99A12', flank: '#EBC02E', belly: '#FFF6D2', pattern: 'bars', accent: '#6E4F05', water: true, swim: 0.05, phase: 0, freq: 6 }); M2.fish.scale.setScalar(4); M2.fish.rotation.y = Math.PI / 2 - 0.75; g.add(M2.fish);
+  M2.ghost = makeFish({ back: '#F2D15A', flank: '#F6DE84', belly: '#FFF7DA', opacity: 0.3, swim: 0.05, phase: 0, freq: 6 }); M2.ghost.rotation.y = Math.PI / 2 - 0.75; M2.ov.add(M2.ghost);
   M2.fishLabel = mkLabel(1, 'Real fish', '#F2D15A');
   M2.ghostLabel = mkLabel(1, 'Where the camera sees it', '#F2B64E');
   M2.portLabel = mkLabel(1, 'Flat port');
@@ -1072,7 +1213,7 @@ M2.env = () => {
   const sunW = V(0.22, -1, 0.12).normalize();
   setSky({ top: '#7cc4dc', hor: '#1f6173', bot: '#0b2a33', sunDir: V(-0.22, 1, -0.12), sunCol: [0.4, 0.45, 0.4] });
   setLights({ sky: '#a8dcef', ground: '#2a3d33', hemi: 0.7, sunCol: '#fff6e0', sun: 3.2, pos: sunW.clone().multiplyScalar(-40), target: V(-12, -4, 0), ext: 30 });
-  setWater(Object.assign(waterOptics('coastal', 0.1, 0.55), {
+  setWater(Object.assign(waterOptics(waterAt(50), 0.1, 0.55), {
     min: V(-46, -4.6, -10), max: V(3.3, 7, 10), surfY: 7, mpu: 0.1, depthOffset: 3.3, adapt: 0.55,
     sunW, sunCol: [0.32, 0.31, 0.28], skyCol: [0.14, 0.155, 0.16], shaft: 0.9, shaftScale: 0.3, shaftFade: 0.05, caust: 0.6, causScale: 0.45
   }));
@@ -1093,10 +1234,15 @@ function m2Housing(g, st) {
   shell.rotation.y = Math.PI / 2; shell.position.x = x0; g.add(shadowy(shell));
   const back = new THREE.Mesh(new THREE.CylinderGeometry(hw - 0.1, hw - 0.1, 0.1, 48), dark);
   back.rotation.z = Math.PI / 2; back.position.x = x1 - 0.05; g.add(back);
-  const camBody = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 1.9), stdMat('#1b1e20', 0.55, 0.2, cut));
-  camBody.position.x = 1.75; g.add(camBody);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 1.15, 40, 1, true), stdMat('#15191b', 0.4, 0.55, cut));
-  barrel.rotation.z = Math.PI / 2; barrel.position.x = 0.6; g.add(barrel);
+  g.add(makeCameraBody(cut));
+  const trayMat = stdMat('#b9c0c4', 0.3, 0.9, cut), gripMat = stdMat('#18191b', 0.92, 0, cut);
+  const tray = new THREE.Mesh(roundBox(1.1, 0.14, 2 * hw + 2.6, 0.05), trayMat); tray.position.set(1.4, -hw - 0.2, 0); g.add(shadowy(tray));
+  [hw + 1.05, -hw - 1.05].forEach(z => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.3, 20), trayMat); post.position.set(1.4, -hw + 0.9, z); g.add(shadowy(post));
+    const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.3, 24), gripMat); sleeve.position.set(1.4, -hw + 0.6, z); g.add(shadowy(sleeve));
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 14), trayMat); ball.position.set(1.4, -hw + 2.1, z); g.add(ball);
+  });
+  [hw - 0.02, -hw + 0.02].forEach(y => { const latch = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.5), stdMat('#9aa1a6', 0.3, 1, cut)); latch.position.set(x1 - 0.15, y + Math.sign(y) * 0.06, -0.2); g.add(latch); });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(st.port === 'flat' ? 1.18 : st.R / 10, 0.07, 16, 72), dark);
   ring.rotation.y = Math.PI / 2; ring.position.x = st.port === 'flat' ? FLAT_X + 0.08 : 0.02; g.add(ring);
   [[1.2, 0.9], [2.1, -0.8], [2.4, 0.5]].forEach(([x, z]) => {
@@ -1327,8 +1473,23 @@ const KD = {
   coastal: [0.20, 0.12, 0.09, 0.10, 0.28, 0.40, 0.62],
   turbid: [1.6, 1.1, 0.75, 0.6, 0.72, 0.85, 1.1]
 };
-const WATER_NAME = { ocean: 'clear open ocean', coastal: 'coastal water', turbid: 'turbid estuary' };
-const PARTICLES = { ocean: 40, coastal: 170, turbid: 480 };
+/* Turbidity slider: 0 = clear open ocean, 50 = coastal, 100 = turbid estuary.
+   Between those anchors Kd, scattering and particle load change geometrically. */
+const WATER_ANCHORS = [
+  { t: 0, kd: KD.ocean, b: 0.03, particles: 40 },
+  { t: 50, kd: KD.coastal, b: 0.25, particles: 170 },
+  { t: 100, kd: KD.turbid, b: 1.4, particles: 480 }
+];
+const waterName = t => t < 12 ? 'clear open ocean' : t < 38 ? 'clear coastal water' : t < 63 ? 'coastal water' : t < 88 ? 'murky coastal water' : 'turbid estuary';
+const waterLabel = t => { const n = waterName(t); return n.charAt(0).toUpperCase() + n.slice(1).replace(' water', ''); };
+function waterAt(t) {
+  t = clamp(t, 0, 100);
+  const exact = WATER_ANCHORS.find(a => a.t === t);
+  if (exact) return { t, kd: exact.kd.slice(), b: exact.b, particles: exact.particles, name: waterName(t) };
+  const [a, b] = t < 50 ? [WATER_ANCHORS[0], WATER_ANCHORS[1]] : [WATER_ANCHORS[1], WATER_ANCHORS[2]];
+  const u = (t - a.t) / (b.t - a.t), geo = (x, y) => x * Math.pow(y / x, u);
+  return { t, kd: a.kd.map((v, i) => geo(v, b.kd[i])), b: geo(a.b, b.b), particles: Math.round(geo(a.particles, b.particles)), name: waterName(t) };
+}
 const PATCHES = [
   ['Red', [0.05, 0.04, 0.04, 0.05, 0.35, 0.8, 0.85]],
   ['Orange', [0.05, 0.05, 0.07, 0.25, 0.75, 0.8, 0.8]],
@@ -1345,17 +1506,17 @@ function displayLight(E) { // downwelling colour with partial exposure compensat
   const c = spec2rgb(E), L = Math.max(lum(c), 1e-5), k = Math.pow(1 / L, 0.72);
   return c.map(v => v * k * 0.8);
 }
-const SCATTER = { ocean: 0.03, coastal: 0.25, turbid: 1.4 };
 /* per-channel extinction and scattering for view paths, from the same spectral Kd table */
-function waterOptics(type, mpu, visual) {
-  const kd = KD[type];
+function waterOptics(w, mpu, visual) {
+  const kd = w.kd;
   const k = spec2rgb(kd.map(v => Math.exp(-v))).map(v => -Math.log(Math.max(v, 1e-4)));
-  const b = SCATTER[type];
+  const b = w.b;
   return { kd, sigT: k.map(v => (v + b) * mpu * visual), sigS: [b, b, b].map(v => v * mpu * visual) };
 }
 const M3 = {
   group: new THREE.Group(), dyn: new THREE.Group(), ov: new THREE.Group(),
-  st: { water: 'coastal', depth: 12, dist: 1.5, sun: 55, strobe: false, arms: 'close', wb: false, snell: true },
+  st: { turb: 50, depth: 12, dist: 1.5, sun: 55, strobe: false, arms: 'close', wb: false, snell: true },
+  turbNow: 50,
   scale: 'Depth: 1 grid step = 2 m · camera-to-slate distance exaggerated · Kd approximate (after Jerlov)',
   fish: []
 };
@@ -1394,21 +1555,16 @@ const M3 = {
     m.rotation.y = Math.PI / 2; m.position.set(0.045, i < 3 ? 0.19 : -0.19, -0.38 + (i % 3) * 0.38); M3.slate.add(m); return m;
   });
   // camera in its housing, strobe on an arm
-  M3.camera = new THREE.Group(); g.add(M3.camera);
-  const housing = uwify(stdMat('#2f383d', 0.35, 0.8), false);
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.44, 0.58), housing); M3.camera.add(shadowy(body));
-  const port = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.32, 32), uwify(stdMat('#111416', 0.3, 0.6), false));
-  port.rotation.z = Math.PI / 2; port.position.x = -0.4; M3.camera.add(port);
-  const glassFace = new THREE.Mesh(new THREE.CircleGeometry(0.16, 32), glassMat(0.5, '#9fc6d6')); glassFace.rotation.y = -Math.PI / 2; glassFace.position.x = -0.565; M3.camera.add(glassFace);
-  M3.strobe = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.26, 24), uwify(stdMat('#2a2e31', 0.4, 0.6), false));
-  g.add(shadowy(M3.strobe));
+  M3.camera = makeUWRig(); g.add(M3.camera);
+  M3.strobe = makeStrobeHead(); g.add(M3.strobe);
   M3.strobeFace = new THREE.Mesh(new THREE.CircleGeometry(0.12, 24), new THREE.MeshBasicMaterial({ color: lin('#fff6d8') }));
   M3.ov.add(M3.strobeFace);
-  M3.arm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 8), uwify(stdMat('#9aa3a8', 0.35, 0.9), false)); g.add(M3.arm);
+  M3.arm = new THREE.Group(); g.add(M3.arm);
+  M3.armMat = uwify(stdMat('#aab3b8', 0.3, 0.9), false); M3.clampMat = uwify(stdMat('#15191b', 0.5, 0.4), false);
   // red fish at four depths: the same colour, seen through different amounts of water
   [4, 12, 24, 34].forEach((dm, k) => {
     for (let i = 0; i < 3; i++) {
-      const f = makeFish({ back: '#d8261c', belly: '#ff8a6e', water: true });
+      const f = makeFish({ back: '#A8140E', flank: '#DC2A1E', belly: '#FF9A80', pattern: 'spots', accent: '#6E0A06', water: true, swim: 0.08, phase: i * 1.7 + k, freq: 7 + i * 0.6 });
       f.scale.setScalar(1.1); g.add(f);
       M3.fish.push({ f, c: V(-9.5 + k * 0.8, -dm / 2 + (i - 1) * 0.3, 1.5 - k * 0.4), R: 1.6 + i * 0.35, w: 0.3 + i * 0.04, ph: i * 2.1 + k });
     }
@@ -1458,15 +1614,17 @@ M3.env = L => {
   setSky({ top: '#1d5d98', hor: low > 0.6 ? '#e8c9a0' : '#b9d4e0', bot: '#06141b', sunDir: sunUp, sunCol: [1.0, 0.9 - 0.2 * low, 0.75 - 0.35 * low] });
   const k = (1 - L.Rf) * Math.max(0.2, Math.sin(L.e));
   setLights({ sky: '#bfe3f2', ground: '#16221f', hemi: 0.45 + 0.3 * k, sunCol: '#fff3dd', sun: 3.4 * k, pos: V(0, -8, -8).addScaledVector(sunW, -70), target: V(0, -8, -8), ext: 42, far: 180 });
-  setWater(Object.assign(waterOptics(st.water, 2, 0.13), {
+  const wt = L.W.t;
+  setWater(Object.assign(waterOptics(L.W, 2, 0.13), {
     min: V(-40, -20, -60), max: V(40, 0, 6), surfY: 0, mpu: 2, depthOffset: 0, adapt: 0.62,
     sunW, sunCol: [0.44 * k, 0.43 * k, 0.4 * k], skyCol: [0.11, 0.125, 0.135],
-    shaft: st.water === 'turbid' ? 0.35 : 1.0, shaftScale: 1.1, shaftFade: st.water === 'ocean' ? 0.025 : 0.07, caust: 0.8, causScale: 0.5
+    shaft: 1.0 - 0.65 * Math.max(0, (wt - 50) / 50), shaftScale: 1.1,
+    shaftFade: wt <= 50 ? 0.025 + 0.045 * wt / 50 : 0.07 + 0.05 * (wt - 50) / 50, caust: 0.8 * (1 - 0.6 * wt / 100), causScale: 0.5
   }));
   UW.uExposure.value = 1.1; UW.uVignette.value = 0.4;
 };
 function m3Light(st) {
-  const K = KD[st.water];
+  const W = waterAt(M3.turbNow), K = W.kd;
   const e = rad(st.sun), ti = Math.PI / 2 - e, tt = Math.asin(Math.sin(ti) / N_WATER);
   const ci = Math.cos(ti), ct = Math.cos(tt);
   const rs = ((ci - N_WATER * ct) / (ci + N_WATER * ct)) ** 2, rp = ((ct - N_WATER * ci) / (ct + N_WATER * ci)) ** 2;
@@ -1485,8 +1643,8 @@ function m3Light(st) {
   const inc3 = K.map((k, i) => amb * E[i] + (st.strobe ? strobeS * Math.exp(-k * r) / Math.max(r, 0.3) ** 2 : 0));
   const aF = Math.pow(Math.max(lum(spec2rgb(E)), 0.02), -0.62);
   const slate3D = PATCHES.map(([, refl]) => spec2rgb(refl.map((v, i) => v * inc3[i])).map(c => c * aF * 1.15));
-  const waterBg = finish(spec2rgb(K.map((k, i) => amb * E[i] * (st.water === 'turbid' ? 0.18 : st.water === 'coastal' ? 0.1 : 0.06))));
-  return { K, e, ti, tt, Rf, E, patches, waterBg, gain, slate3D };
+  const waterBg = finish(spec2rgb(K.map((k, i) => amb * E[i] * (W.t <= 50 ? 0.06 + 0.04 * W.t / 50 : 0.1 + 0.08 * (W.t - 50) / 50))));
+  return { W, K, e, ti, tt, Rf, E, patches, waterBg, gain, slate3D };
 }
 function m3Column(K) {
   const cx = M3.colCanvas.getContext('2d');
@@ -1511,26 +1669,44 @@ function strobeAim(S, C, T, arms) {
   }
   return A;
 }
-function m3Snow(st) {
+/* strobe arm: aluminium segments with ball joints and a clamp at the elbow */
+function m3Arm(pts) {
+  const g = M3.arm;
+  while (g.children.length) g.remove(g.children[0]);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], d = pts[i + 1].clone().sub(a), L = d.length();
+    const m = new THREE.Mesh(UNIT_CYL, M3.armMat);
+    m.position.copy(a).addScaledVector(d, 0.5); m.scale.set(0.028, L, 0.028); m.quaternion.setFromUnitVectors(YAXIS, d.normalize());
+    g.add(m);
+  }
+  pts.forEach((p, i) => {
+    const elbow = pts.length > 2 && i === 1;
+    const b = new THREE.Mesh(UNIT_SPH, elbow ? M3.clampMat : M3.armMat);
+    b.scale.setScalar(elbow ? 0.07 : 0.045); b.position.copy(p); g.add(b);
+  });
+  shadowy(g);
+}
+function m3Snow(W) {
   srand(19);
-  const n = 1400, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), K = KD[st.water];
+  const milk = W.t / 100, n = Math.round(700 + 1900 * milk);
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), K = W.kd;
   for (let i = 0; i < n; i++) {
     const y = -0.3 - rnd() * 19.4;
     pos.set([-22 + rnd() * 44, y, -26 + rnd() * 31.5], i * 3);
-    col.set(displayLight(K.map(k => Math.exp(-k * -y * 2))).map(v => clamp(v * 0.55 + 0.04, 0, 1)), i * 3);
+    col.set(displayLight(K.map(k => Math.exp(-k * -y * 2))).map(v => clamp(v * (0.55 + 0.25 * milk) + 0.04 + 0.1 * milk, 0, 1)), i * 3);
   }
   M3.snowGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   M3.snowGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   M3.snowGeo.computeBoundingSphere();
 }
 function m3Particles(st, geo) {
-  const cnt = PARTICLES[st.water];
+  const cnt = geo.W.particles;
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const pos = new Float32Array(cnt * 3), col = new Float32Array(cnt * 3);
   const { C, S, T, A } = geo;
   const toT = T.clone().sub(C).normalize(), sToA = A.clone().sub(S).normalize();
   let inFrame = [];
-  const water = displayLight(KD[st.water].map(k => Math.exp(-k * st.depth)));
+  const water = displayLight(geo.W.kd.map(k => Math.exp(-k * st.depth)));
   for (let i = 0; i < cnt; i++) {
     const p = V(T.x - 0.3 + rnd() * (C.x - T.x + 0.9), C.y - 1.4 + rnd() * 2.8, -1.5 + rnd() * 3);
     pos.set([p.x, p.y, p.z], i * 3);
@@ -1553,7 +1729,8 @@ function m3Update() {
   clearGroup(g);
   M3.env(L);
   m3Column(L.K);
-  if (M3.snowKey !== st.water) { m3Snow(st); M3.snowKey = st.water; }
+  const snowKey = Math.round(L.W.t);
+  if (M3.snowKey !== snowKey) { m3Snow(L.W); M3.snowKey = snowKey; }
   // sun and rays
   const sd = V(-Math.cos(L.e), Math.sin(L.e), 0);
   M3.sun.position.copy(V(-3, 0, 0).addScaledVector(sd, 17));
@@ -1591,9 +1768,7 @@ function m3Update() {
   const A = strobeAim(S, C, T, st.arms);
   M3.strobe.position.copy(S);
   M3.strobe.quaternion.setFromUnitVectors(YAXIS, S.clone().sub(A).normalize());
-  const armFrom = V(camX, yc + 0.2, 0), armD = S.clone().sub(armFrom);
-  M3.arm.position.copy(armFrom).addScaledVector(armD, 0.5); M3.arm.scale.set(1, armD.length(), 1);
-  M3.arm.quaternion.setFromUnitVectors(YAXIS, armD.clone().normalize());
+  m3Arm(st.arms === 'close' ? [V(camX - 0.05, yc + 0.25, 0), S] : [V(camX + 0.02, yc + 0.2, 0.46), V(camX + 0.32, yc + 0.95, 1.05), S]);
   M3.strobeFace.position.copy(S).addScaledVector(A.clone().sub(S).normalize(), 0.14);
   M3.strobeFace.lookAt(A);
   M3.strobeFace.material.color.copy(lin(st.strobe ? '#fff6d8' : '#2a2e31'));
@@ -1610,7 +1785,7 @@ function m3Update() {
   M3.patchMeshes.forEach((m, i) => m.material.color.setRGB(...L.slate3D[i]));
   M3.camLabel.pos.set(camX, yc + 0.5, 0);
   M3.slateLabel.pos.set(slX, yc + 0.6, 0);
-  const pf = m3Particles(st, { C, S, T, A });
+  const pf = m3Particles(st, { C, S, T, A, W: L.W });
   // Snell's window
   const hh = -yc, rr = hh * Math.tan(Math.asin(1 / N_WATER));
   M3.snellLabel.show = M3.tirLabel.show = st.snell;
@@ -1645,7 +1820,7 @@ function m3Readouts(L, bs) {
   const deepest = WL[K.indexOf(Math.min(...K))];
   M3.talkEl.innerHTML = `
     <p>At the surface, sunlight arriving ${st.sun}° above the horizon loses <b>${fmt(L.Rf * 100, 1)}%</b> to reflection. The rest bends toward the vertical, to <b>${fmt(deg(L.tt), 0)}°</b>, so underwater all light seems to come from above.</p>
-    <p>Water then absorbs light unevenly. In ${WATER_NAME[st.water]}, <b>${pf(pct(5))}</b> of red is left at ${st.depth} m, compared with <b>${pf(pct(1))}</b> of blue. The most penetrating colour here is about <b>${deepest} nm</b>. ${st.water === 'ocean' ? 'In clear water that is blue, because water molecules absorb red strongly.' : 'Dissolved organic matter and phytoplankton absorb blue as well, so the window shifts toward green.'}</p>
+    <p>Water then absorbs light unevenly. In ${L.W.name}, <b>${pf(pct(5))}</b> of red is left at ${st.depth} m, compared with <b>${pf(pct(1))}</b> of blue. The most penetrating colour here is about <b>${deepest} nm</b>. ${deepest <= 450 ? 'In clear water that is blue, because water molecules absorb red strongly.' : 'Dissolved organic matter and phytoplankton absorb blue as well, so the window shifts toward green.'}</p>
     <p>The camera loses colour twice: once on the way down, and again over the <b>${fmtDist(st.dist)}</b> from slate to lens. ${st.strobe ? `The strobe’s full-spectrum light only travels ${fmtDist(st.dist * 2)} there and back, so reds come back when you’re close. ${st.arms === 'close' ? `But a strobe beside the lens lights the particles right in front of it: <b>${bs}</b> specks of backscatter. Move it out on the arms.` : 'On long arms, angled outward, only the edge of the beam crosses the lens’s view near the slate, so backscatter drops.'}` : 'Switch the strobe on to restore colour at short range.'} ${st.wb ? 'Custom white balance boosts the weak channels, but it can’t invent red that never reached the sensor.' : ''}</p>
     ${st.snell ? `<p>Looking up, the whole sky is squeezed into a <b>97°</b> cone (Snell’s window) because light can’t refract beyond the 48.6° critical angle. Outside it, the surface acts as a mirror.</p>` : ''}`;
 }
@@ -1695,7 +1870,15 @@ function m3Inset(L, pf, C) {
 (function panelM3() {
   const m = modShell(2, 'What water does to light', 'Sunlight enters the sea, bends, and loses its colours one by one. Put a colour slate at depth and see what the camera actually records.');
   const g = groupBox(m, 'Controls');
-  segmented(g, { id: 'm3-water', label: 'Water type', value: 'coastal', options: [['ocean', 'Open ocean'], ['coastal', 'Coastal'], ['turbid', 'Turbid estuary']] }, v => { M3.st.water = v; m3Update(); });
+  const turbIn = slider(g, { id: 'm3-turb', label: 'Turbidity', min: 0, max: 100, step: 1, value: 50, fmt: v => waterLabel(v) }, v => {
+    const snap = [0, 50, 100].find(a => Math.abs(a - v) <= 3);
+    if (snap !== undefined && snap !== v) { turbIn.value = snap; document.getElementById('m3-turb-o').textContent = waterLabel(snap); v = snap; }
+    turbIn.setAttribute('aria-valuetext', waterLabel(v));
+    M3.st.turb = v;
+    if (reduceMotion) { M3.turbNow = v; m3Update(); }
+  });
+  turbIn.setAttribute('aria-valuetext', waterLabel(50));
+  turbIn.parentElement.appendChild(el('div', { class: 'ticks', 'aria-hidden': 'true' }, '<span>Clear ocean</span><span>Coastal</span><span>Turbid estuary</span>'));
   slider(g, { id: 'm3-depth', label: 'Depth of slate and camera', min: 0, max: 40, step: 0.5, value: 12, fmt: v => v + ' m' }, v => { M3.st.depth = v; m3Update(); });
   slider(g, { id: 'm3-dist', label: 'Camera-to-slate distance', min: 0.3, max: 5, step: 0.1, value: 1.5, fmt: v => fmtDist(v) }, v => { M3.st.dist = v; m3Update(); });
   slider(g, { id: 'm3-sun', label: 'Sun height above horizon', min: 5, max: 90, step: 1, value: 55, fmt: v => v + '°' }, v => { M3.st.sun = v; m3Update(); });
@@ -1762,7 +1945,7 @@ const WORKSHEETS = {
   },
   2: {
     title: 'Worksheet: light in water',
-    note: 'Set the controls as each question says. Use the readouts, the spectrum bars in the camera view and the 3D column.',
+    note: 'Set the controls as each question says. The turbidity slider clicks into place at Clear ocean, Coastal and Turbid estuary. Use the readouts, the spectrum bars in the camera view and the 3D column.',
     items: [
       {
         set: 'Sun 55°, then sun 10°',
@@ -1780,34 +1963,39 @@ const WORKSHEETS = {
         a: '<b>11.3 m</b> at 10 m and <b>22.7 m</b> at 20 m. The radius doubles when the depth doubles, but the angle stays 97°. Outside the window the surface acts as a mirror (total internal reflection) and shows the underwater scene. The 97° is the same limit found for a flat port in tab 2, Q3.'
       },
       {
-        set: 'Coastal water · Depth 5, 10, 20 m',
+        set: 'Turbidity: Coastal · Depth 5, 10, 20 m',
         q: 'Complete a table of the percentage of red (650 nm), green (550 nm) and blue (450 nm) light left at each depth. Which colour disappears first, and which gets furthest?',
         a: '5 m: red <b>14%</b>, green <b>61%</b>, blue <b>55%</b>. 10 m: <b>1.8%</b>, <b>37%</b>, <b>30%</b>. 20 m: <b>0.03%</b>, <b>14%</b>, <b>9.1%</b>. Red goes first (down to 10% by 5.8 m). In coastal water green gets furthest, just ahead of blue.'
       },
       {
-        set: 'Depth 5 m · Open ocean, coastal, turbid estuary',
+        set: 'Depth 5 m · Turbidity: Clear ocean, Coastal, Turbid estuary',
         q: 'Using the spectrum bars, find the most abundant colour at 5 m in each water type, and the depth where red falls to 10%. Why do coastal and estuarine waters look green or brown rather than blue?',
         a: 'Open ocean: <b>blue</b> (~450 nm); red falls to 10% by <b>6.4 m</b>. Coastal: <b>blue-green</b> (~500 nm), <b>5.8 m</b>. Turbid estuary: <b>green-yellow</b> (~550 nm), <b>2.7 m</b>. Pure water absorbs red. Dissolved organic matter (CDOM) and phytoplankton also absorb blue, and suspended sediment scatters light, so the window of best transmission shifts from blue toward green and yellow.'
       },
       {
-        set: 'Coastal · Depth 10 m · Strobe off · Camera 0.5 m, then 4 m',
+        set: 'Turbidity: Coastal · Depth 10 m · Strobe off · Camera 0.5 m, then 4 m',
         q: 'Compare the recorded colour slate at the two distances. The depth hasn’t changed, so why are the colours worse from 4 m?',
         a: 'Light reflected by the slate has to travel horizontally to the camera, and water absorbs red along that path too. The total water path is the depth plus the camera distance. At 4 m an extra e^(−0.40 × 4) ≈ <b>20%</b> of the remaining red survives, so reds turn grey-blue. Hence the rule: get close.'
       },
       {
-        set: 'Coastal · Depth 20 m · Strobe on, beside the lens · Camera 0.5, 1.5, 4 m',
+        set: 'Turbidity: Coastal · Depth 20 m · Strobe on, beside the lens · Camera 0.5, 1.5, 4 m',
         q: 'What happens to the red patch as the camera moves away? Strobe light goes to the slate and back. Using Kd(650) ≈ 0.40 m⁻¹, calculate how much red survives the round trip at 0.5 m and 4 m.',
         a: '0.5 m: e^(−0.40 × 1) ≈ <b>67%</b>. 1.5 m: ≈ <b>30%</b>. 4 m: e^(−0.40 × 8) ≈ <b>4%</b>. The inverse-square law makes it worse: at 4 m the strobe delivers about 1/64 of the light it gives at 0.5 m. The red patch is red close up and loses its colour at 4 m, so strobes only restore colour within a metre or two.'
       },
       {
-        set: 'Turbid estuary · Strobe on · Camera 1.5 m · Beside the lens, then out on arms · Repeat at 3 m',
+        set: 'Turbidity: Turbid estuary · Strobe on · Camera 1.5 m · Beside the lens, then out on arms · Repeat at 3 m',
         q: 'Record the backscatter specks in frame for each set-up. Explain why moving the strobe changes the count, and why getting closer helps too.',
         a: 'At 1.5 m: <b>16 → 4</b> specks. At 3 m: <b>67 → 26</b>. Beside the lens, the beam lights particles right in front of the lens, and these appear large and bright in the frame. On long arms, angled outward, only the edge of the beam crosses the lens’s view, near the subject, so far fewer particles are lit. A shorter distance also means less water, and fewer particles, between lens and subject.'
       },
       {
-        set: 'Coastal · Strobe off · Camera 1.5 m · Depth 15 m, then 30 m · Custom white balance on/off',
+        set: 'Turbidity: Coastal · Strobe off · Camera 1.5 m · Depth 15 m, then 30 m · Custom white balance on/off',
         q: 'Which patches does custom white balance improve at 15 m? Why can’t it bring back the red patch at 30 m?',
         a: 'At 15 m it makes the white patch neutral and partly restores warm colours by amplifying the weak red channel. At 30 m almost no red light is left: e^(−0.40 × 30) ≈ 0.0006% at 650 nm, before the extra path to the camera. Amplifying almost nothing gives almost nothing, and in a real camera, noise. The lab caps the gain at 8×. Only adding light, with a strobe, brings red back.'
+      },
+      {
+        set: 'Depth 10 m · Drag turbidity slowly from Clear ocean to Turbid estuary',
+        q: 'Watch the most penetrating colour in the “Say it in class” notes and the blue light readout. Where on the slider does the best-transmitted colour change from blue to blue-green, and then to green? What happens to blue light at 10 m, and why?',
+        a: 'It changes from <b>blue (450 nm) to blue-green (500 nm)</b> about a quarter of the way along, where the slider reads <b>Clear coastal</b>, and to <b>green (550 nm)</b> about two-thirds of the way along, at <b>Murky coastal</b>. Blue light left at 10 m falls from <b>83%</b> in clear ocean to <b>30%</b> in coastal water and to effectively <b>0%</b> in the turbid estuary. Dissolved organic matter and phytoplankton absorb blue strongly, and suspended sediment scatters and absorbs light. So the more turbid the water, the further the colour window shifts toward green and yellow, and the faster all light fades.'
       }
     ]
   }
@@ -1851,6 +2039,7 @@ function buildWorksheet(modIndex) {
 }
 buildWorksheet(1);
 buildWorksheet(2);
+panel.appendChild(el('footer', { class: 'credit' }, '© 2026 Fabio Favoretto · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a> · 3D by <a href="https://threejs.org/" target="_blank" rel="noopener">three.js</a>'));
 /* ---------- module switching ---------- */
 const MODS = [
   { m: M1, update: m1Update, views: () => M1.views },
@@ -1884,7 +2073,9 @@ setMod(start, true);
 /* ---------- loop ---------- */
 let lastW = 0, lastH = 0;
 const clock = new THREE.Clock();
+let lastT = performance.now();
 function frame() {
+  const nowT = performance.now(), frameDt = Math.min(0.5, (nowT - lastT) / 1000); lastT = nowT;
   const w = stage.clientWidth, h = stage.clientHeight;
   if (w !== lastW || h !== lastH) {
     renderer.setSize(w, h, false); cam.aspect = w / Math.max(h, 1); cam.updateProjectionMatrix();
@@ -1904,6 +2095,11 @@ function frame() {
     o.f.position.set(o.c.x + Math.cos(a) * o.R, o.c.y + Math.sin(a * 2.3) * 0.08, o.c.z + Math.sin(a) * o.R * 0.6);
     o.f.rotation.y = Math.atan2(-Math.cos(a) * o.R * 0.6, -Math.sin(a) * o.R);
   });
+  if (M3.turbNow !== M3.st.turb) {
+    const dT = M3.st.turb - M3.turbNow;
+    M3.turbNow = Math.abs(dT) < 0.4 ? M3.st.turb : M3.turbNow + dT * (1 - Math.exp(-frameDt / 0.16));
+    if (active === 2) m3Update();
+  }
   if (envDirty && performance.now() - envAt > 150) rebuildEnv();
   renderFrame();
   placeLabels(w, h);
