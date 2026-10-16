@@ -106,10 +106,6 @@
   .pill.bad { background: rgba(240, 115, 90, .16); color: var(--bad); }
   .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
 
-  .talk { border-top: 1px solid var(--line); padding-top: 16px; }
-  .talk p { margin: 0 0 10px; max-width: 62ch; }
-  .talk p:last-child { margin-bottom: 0; }
-  .talk b { color: var(--amber); font-weight: 600; }
 
   .jump {
     margin-top: 10px; font: 600 13px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
@@ -120,7 +116,6 @@
   .ws-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
   .ws h3 { margin: 0; font: 700 22px/1.05 var(--display); text-transform: uppercase; letter-spacing: .03em; text-wrap: balance; }
   .ws-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-  .ws .vbtn[aria-pressed="true"] { background: var(--good); color: var(--ink); border-color: var(--good); }
   .ws-note { margin: 0; color: var(--muted); font-size: 14px; }
   .ws-list { margin: 0; padding-left: 1.6em; display: flex; flex-direction: column; gap: 16px; }
   .ws-list li::marker { font: 600 14px var(--mono); color: var(--amber); }
@@ -129,9 +124,6 @@
     background: rgba(67, 169, 198, .1); border: 1px solid rgba(67, 169, 198, .28); border-radius: 4px; padding: 2px 6px;
   }
   .ws-list .q { margin: 0; max-width: 62ch; }
-  .ans { margin-top: 8px; padding: 10px 12px; font-size: 14px; background: rgba(107, 203, 139, .07); border: 1px solid rgba(107, 203, 139, .25); border-radius: 6px; }
-  .ans b { color: var(--good); font-weight: 600; }
-  .ans-l { display: block; margin-bottom: 4px; font: 600 11px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--good); }
   .ws-copy { width: 100%; min-height: 160px; font: 13px/1.45 var(--mono); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
   .ticks { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-top: 1px; font: 500 11.5px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .credit { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
@@ -1069,14 +1061,6 @@ function m1Readouts(f, N, D, dF, dset) {
   ];
   M1.subjects.forEach(s => rows.push([`<span class="sw" style="background:${s.color}"></span>${s.name} blur`, `${fmt(s.coc, 3)} mm${cocPill(s.coc)}`]));
   M1.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
-  // talk track
-  const sharp = M1.subjects.filter(s => s.coc < 0.03).map(s => s.name.toLowerCase());
-  const worst = M1.subjects.reduce((a, b) => a.coc > b.coc ? a : b);
-  const shift = Math.abs(worst.di - dset);
-  M1.talkEl.innerHTML = `
-    <p>Every point on a subject sends a cone of light into the lens. The lens bends that cone so it converges again at one point behind the lens, at distance <b>d<sub>i</sub></b> given by <b>1/f = 1/d<sub>o</sub> + 1/d<sub>i</sub></b>. Focusing means moving the lens (drawn here as the sensor) until that point lands on the sensor.</p>
-    <p>Focused at <b>${fmtDist(dF / 1000)}</b>, the ${f} mm lens sits <b>${fmt(dset, 2)} mm</b> from the sensor. The ${worst.name.toLowerCase()} would come to a point <b>${fmt(shift, 2)} mm</b> ${worst.behind ? 'behind' : 'in front of'} the sensor, so each of its points spreads into a <b>${fmt(worst.coc, 2)} mm</b> blur disc${worst.coc > 0.03 ? `, ${fmt(worst.coc / 0.03, 0)}× the 0.03 mm we accept as sharp on a full-frame sensor` : ''}.</p>
-    <p>${sharp.length ? `Sharp right now: ${sharp.join(', ')}.` : 'Nothing is quite sharp right now.'} Stop down (a bigger f-number) and the cone narrows, so the same focus error makes a smaller disc: depth of field grows. At f/${N} it runs from <b>${fmtDist(near / 1000)}</b> to <b>${far === Infinity ? 'infinity' : fmtDist(far / 1000)}</b>.</p>`;
 }
 function m1Inset(f) {
   const { ctx, w, h } = M1.inset;
@@ -1116,8 +1100,6 @@ function m1Inset(f) {
   segmented(g, { id: 'm1-show', label: 'Show light rays from', value: 'all', options: [['all', 'All'], ['near', 'Near'], ['mid', 'Middle'], ['far', 'Far']] }, v => { M1.st.show = v; m1Update(); });
   M1.inset = insetBox(m, 'What the sensor records', 360, 240, 'Each point of a fish is smeared into a disc the size of its blur circle on the sensor (full-frame, 36 mm wide).');
   const r = el('dl', { class: 'readouts' }); m.appendChild(r); M1.readEl = r;
-  const t = el('div', { class: 'talk' }); t.appendChild(el('p', { class: 'eyebrow' }, 'Say it in class'));
-  M1.talkEl = el('div'); t.appendChild(M1.talkEl); m.appendChild(t);
   M1.views = { side: { t: V(-3, 0, 0), r: 25, az: 0, el: 0.02 }, d3: { t: V(-2.5, -0.2, 0), r: 25, az: -0.72, el: 0.36 } };
 })();
 
@@ -1379,17 +1361,6 @@ function m2Readouts(o) {
   if (st.port === 'flat' && water) rows.push(['Colour fringe at frame edge', `≈ ${fmt(o.fringe, 0)} px<span class="pill ${o.fringe > 15 ? 'bad' : 'warn'}">on a 6000 px sensor</span>`]);
   if (st.port === 'dome' && water) rows.push(['Close-focus needed', o.apparent < 0.3 ? `${fmtDist(o.apparent)}<span class="pill bad">add dioptre</span>` : `${fmtDist(o.apparent)}<span class="pill good">ok for most lenses</span>`]);
   M2.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
-  let t;
-  if (!water) t = `<p>In air the port does nothing: light meets glass with the same refractive index on both sides of a thin window, so rays pass straight through. The camera sees the fish at its real distance, <b>${fmtDist(st.dist)}</b>, with the lens’s full <b>${st.fov}°</b> angle of view. Now switch the medium to water.</p>`;
-  else if (st.port === 'flat') t = `
-    <p>Light leaves water (n ≈ 1.33) and enters air (n = 1.00) at the flat port. By Snell’s law, n<sub>1</sub>sin θ<sub>1</sub> = n<sub>2</sub>sin θ<sub>2</sub>, so every ray bends <b>away</b> from the normal. Trace the air rays backwards (dashed) and they meet closer than the fish.</p>
-    <p>The fish ${fmtDist(st.dist)} away looks <b>${fmtDist(o.apparent)}</b> away, about ¾ of the real distance, and <b>${fmt(o.sizeRatio * 100 - 100, 0)}% bigger</b>. Divers misjudge distance for the same reason. The lens’s ${st.fov}° view shrinks to <b>${fmt(o.fovW, 0)}°</b>, so a wide-angle lens stops being wide.</p>
-    <p>Refraction also depends on wavelength: blue bends more than red. Toward the edge of the frame that splits colours by about <b>${fmt(o.fringe, 0)} px</b> and stretches straight lines outward (pincushion distortion). Flat ports suit macro work, where the field is narrow.</p>`;
-  else t = `
-    <p>A dome port is part of a sphere centred on the lens’s entrance pupil. Every ray heading for the centre of the lens meets the dome <b>square-on</b>, so it doesn’t bend. The full <b>${st.fov}°</b> angle of view survives, with no extra magnification and almost no colour fringing.</p>
-    <p>The water–air curve still acts as a weak diverging lens. It forms a <b>virtual image</b> of the fish just in front of the dome: the fish ${fmtDist(st.dist)} away appears <b>${fmtDist(o.apparent)}</b> from the lens, at <b>${fmt(o.mv * 100, 0)}%</b> of its real size. The camera has to focus on that virtual image, not on the fish.</p>
-    <p>So wide-angle lenses behind domes must focus very close (often with a dioptre), and bigger domes push the virtual image further out, which is easier on the corners.</p>`;
-  M2.talkEl.innerHTML = t;
 }
 function m2Inset(o) {
   const { ctx, w, h } = M2.inset, st = M2.st;
@@ -1454,8 +1425,6 @@ function m2Inset(o) {
   toggle(g, { id: 'm2-disp', label: 'Show colour splitting (×10 exaggerated)', value: false }, v => { M2.st.disp = v; m2Update(); });
   M2.inset = insetBox(m, 'Through the viewfinder', 360, 240, 'A 10 cm grid on a reef wall behind the fish. The dashed outline is the same shot taken on land.');
   const r = el('dl', { class: 'readouts' }); m.appendChild(r); M2.readEl = r;
-  const t = el('div', { class: 'talk' }); t.appendChild(el('p', { class: 'eyebrow' }, 'Say it in class'));
-  M2.talkEl = el('div'); t.appendChild(M2.talkEl); m.appendChild(t);
 })();
 M2.viewsFn = () => {
   const d = M2.st.dist * 10;
@@ -1806,23 +1775,17 @@ function m3Readouts(L, bs) {
   const st = M3.st, K = L.K;
   const pct = i => Math.exp(-K[i] * st.depth) * 100;
   const pf = v => v >= 10 ? fmt(v, 0) + '%' : v >= 1 ? fmt(v, 1) + '%' : fmt(v, 2) + '%';
-  const red10 = Math.log(10) / K[5];
+  const red10 = Math.log(10) / K[5], deepest = WL[K.indexOf(Math.min(...K))];
   const rows = [
     [`<span class="sw" style="background:${WL_COL[5]}"></span>Red light left (650 nm)`, pf(pct(5))],
     [`<span class="sw" style="background:${WL_COL[3]}"></span>Green light left (550 nm)`, pf(pct(3))],
     [`<span class="sw" style="background:${WL_COL[1]}"></span>Blue light left (450 nm)`, pf(pct(1))],
     ['Red falls to 10% at', fmt(red10, 1) + ' m'],
+    ['Most penetrating colour', deepest + ' nm'],
     ['Sunlight reflected at surface', fmt(L.Rf * 100, 1) + '%'],
     ['Backscatter specks in frame', st.strobe ? `${bs}<span class="pill ${bs > 12 ? 'bad' : bs > 3 ? 'warn' : 'good'}">${bs > 12 ? 'heavy' : bs > 3 ? 'some' : 'clean'}</span>` : '—']
   ];
   M3.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
-  const redPatch = L.patches[0].rec;
-  const deepest = WL[K.indexOf(Math.min(...K))];
-  M3.talkEl.innerHTML = `
-    <p>At the surface, sunlight arriving ${st.sun}° above the horizon loses <b>${fmt(L.Rf * 100, 1)}%</b> to reflection. The rest bends toward the vertical, to <b>${fmt(deg(L.tt), 0)}°</b>, so underwater all light seems to come from above.</p>
-    <p>Water then absorbs light unevenly. In ${L.W.name}, <b>${pf(pct(5))}</b> of red is left at ${st.depth} m, compared with <b>${pf(pct(1))}</b> of blue. The most penetrating colour here is about <b>${deepest} nm</b>. ${deepest <= 450 ? 'In clear water that is blue, because water molecules absorb red strongly.' : 'Dissolved organic matter and phytoplankton absorb blue as well, so the window shifts toward green.'}</p>
-    <p>The camera loses colour twice: once on the way down, and again over the <b>${fmtDist(st.dist)}</b> from slate to lens. ${st.strobe ? `The strobe’s full-spectrum light only travels ${fmtDist(st.dist * 2)} there and back, so reds come back when you’re close. ${st.arms === 'close' ? `But a strobe beside the lens lights the particles right in front of it: <b>${bs}</b> specks of backscatter. Move it out on the arms.` : 'On long arms, angled outward, only the edge of the beam crosses the lens’s view near the slate, so backscatter drops.'}` : 'Switch the strobe on to restore colour at short range.'} ${st.wb ? 'Custom white balance boosts the weak channels, but it can’t invent red that never reached the sensor.' : ''}</p>
-    ${st.snell ? `<p>Looking up, the whole sky is squeezed into a <b>97°</b> cone (Snell’s window) because light can’t refract beyond the 48.6° critical angle. Outside it, the surface acts as a mirror.</p>` : ''}`;
 }
 function m3Inset(L, pf, C) {
   const { ctx, w, h } = M3.inset, st = M3.st;
@@ -1888,8 +1851,6 @@ function m3Inset(L, pf, C) {
   toggle(g, { id: 'm3-snell', label: "Show Snell's window", value: true }, v => { M3.st.snell = v; m3Update(); });
   M3.inset = insetBox(m, 'What the camera records', 360, 220, 'Auto-exposure on. Kd values are approximate, after Jerlov water types.');
   const r = el('dl', { class: 'readouts' }); m.appendChild(r); M3.readEl = r;
-  const t = el('div', { class: 'talk' }); t.appendChild(el('p', { class: 'eyebrow' }, 'Say it in class'));
-  M3.talkEl = el('div'); t.appendChild(M3.talkEl); m.appendChild(t);
   M3.views = { side: { t: V(-1, -9.5, 0), r: 44, az: 0, el: 0.02 }, d3: { t: V(-1, -9, 0), r: 44, az: -0.5, el: 0.2 } };
 })();
 
@@ -1903,43 +1864,35 @@ const WORKSHEETS = {
     items: [
       {
         set: 'Air · Flat port · Fish 1.00 m · Lens 94°',
-        q: 'Record the apparent distance and apparent size. Now switch the housing to <em>Water</em> and record both again. Use Snell’s law to explain what changed.',
-        a: 'In air: 1.00 m and 100%. In water: about <b>76 cm</b> and <b>134%</b>. Light leaving water (n ≈ 1.33) for air bends away from the normal at the port. Traced back, the rays meet about ¾ of the way to the fish, so it looks closer and roughly a third bigger.'
+        q: 'Record the apparent distance and apparent size. Now switch the housing to <em>Water</em> and record both again. Use Snell’s law to explain what changed.'
       },
       {
         set: 'Water · Flat port · Fish 2.00 m',
-        q: 'Predict the apparent distance with <em>apparent ≈ real ÷ 1.33</em>, then check it on the slider. Why is the lab’s value slightly larger than your prediction?',
-        a: '2.00 ÷ 1.333 ≈ <b>1.50 m</b>, and the lab shows <b>1.51 m</b>. The last 3.5 cm between the port and the lens is air, and that part of the path isn’t shortened. Only the water path is divided by n.'
+        q: 'Predict the apparent distance with <em>apparent ≈ real ÷ 1.33</em>, then check it on the slider. Why is the lab’s value slightly larger than your prediction?'
       },
       {
         set: 'Water · Flat port · Lens 94°, then 130°',
-        q: 'Record the angle of view underwater for each lens. Show the working for the 94° lens using 2 × sin⁻¹(sin(θ/2) ÷ 1.333). What is the widest view a flat port can ever give?',
-        a: 'sin 47° = 0.731; ÷ 1.333 = 0.549; sin⁻¹ = 33.3°; × 2 = <b>66.5°</b> (the readout rounds it to 67°). The 130° lens gives <b>86°</b>. As the lens approaches 180°, sin(θ/2) → 1, so the limit is 2 × sin⁻¹(1/1.333) = <b>97.2°</b>. That is the same angle as Snell’s window in tab 3.'
+        q: 'Record the angle of view underwater for each lens. Show the working for the 94° lens using 2 × sin⁻¹(sin(θ/2) ÷ 1.333). What is the widest view a flat port can ever give?'
       },
       {
         set: 'Water · Flat port · Colour splitting on · Lens 60°, 94°, 130°',
-        q: 'Which is bent more by the port, red or blue light? Record the colour fringe at the frame edge for each lens. Why is the centre of the frame unaffected?',
-        a: '<b>Blue</b> bends more, because water’s refractive index is higher for blue (≈ 1.340) than for red (≈ 1.331). Fringes are about <b>26 px</b> (60°), <b>41 px</b> (94°) and <b>110 px</b> (130°) on a 6000 px sensor. On the axis, light meets the port square-on, so it isn’t bent and the colours don’t separate. Dispersion grows with the angle of incidence toward the edges.'
+        q: 'Which is bent more by the port, red or blue light? Record the colour fringe at the frame edge for each lens. Why is the centre of the frame unaffected?'
       },
       {
         set: 'Water · Dome port · Radius 10 cm · Fish 1.00 m · Lens 94°',
-        q: 'Record the angle of view, apparent size and apparent distance. Why does a dome keep the full angle of view? Where must the lens focus?',
-        a: '<b>94°</b>, <b>100%</b>, <b>31 cm</b>. The dome is centred on the lens’s entrance pupil, so rays heading for the lens cross the glass at right angles and don’t bend. The curved water–air surface still acts as a weak diverging lens. It forms a virtual image about 31 cm away at about 31% of the fish’s real size, so the angular size is unchanged. The lens must focus on that virtual image at about 0.31 m, not at 1 m.'
+        q: 'Record the angle of view, apparent size and apparent distance. Why does a dome keep the full angle of view? Where must the lens focus?'
       },
       {
         set: 'Water · Dome port · Fish 1.00 m · Radius 4 cm, then 12 cm',
-        q: 'How does the virtual image distance change with dome size? Your lens can only focus down to 0.25 m. Which dome needs a close-up dioptre?',
-        a: '4 cm dome: <b>14 cm</b>. 12 cm dome: <b>35 cm</b>. Bigger domes push the virtual image further out. The 4 cm dome’s image is closer than 0.25 m, so it needs a dioptre (the lab flags it). The 10 cm and 12 cm domes are fine. Larger domes also give sharper corners, because the curved virtual image sits further from the lens.'
+        q: 'How does the virtual image distance change with dome size? Your lens can only focus down to 0.25 m. Which dome needs a close-up dioptre?'
       },
       {
         set: 'Planning',
-        q: 'You have two dives: photographing a 3 cm nudibranch, then a wide view of a seagrass meadow with a diver in it. Choose a port for each and justify it using what you measured.',
-        a: '<b>Nudibranch: flat port</b> with a macro lens. The angle of view is narrow, so edge distortion and colour fringing barely matter, and the extra ~33% magnification helps. <b>Seagrass scene: dome port</b> with a wide-angle lens. It keeps the full angle of view with little distortion or fringing. Focus on the virtual image, adding a dioptre if the lens can’t focus close enough.'
+        q: 'You have two dives: photographing a 3 cm nudibranch, then a wide view of a seagrass meadow with a diver in it. Choose a port for each and justify it using what you measured.'
       },
       {
         set: 'Thinking about divers',
-        q: 'A diver’s mask is a flat port. Using Q1, explain why divers often reach short of an object, and why fish look bigger to divers than they really are.',
-        a: 'Through the mask everything appears at about <b>¾ of its real distance</b>. A diver reaches for where the object seems to be and stops short of it. The same refraction enlarges the angle an object fills by about <b>a third</b>, so fish look bigger than they are.'
+        q: 'A diver’s mask is a flat port. Using Q1, explain why divers often reach short of an object, and why fish look bigger to divers than they really are.'
       }
     ]
   },
@@ -1949,53 +1902,43 @@ const WORKSHEETS = {
     items: [
       {
         set: 'Sun 55°, then sun 10°',
-        q: 'Record the percentage of sunlight reflected at the surface for each sun height. Use this to explain why dawn and dusk dives are darker, even in clear water.',
-        a: '<b>2.3%</b> at 55°, <b>34.8%</b> at 10°. Low sunlight meets the surface at a grazing angle, so far more is reflected (Fresnel reflection). About a third never enters the water. What does enter is also spread over a larger area of sea surface.'
+        q: 'Record the percentage of sunlight reflected at the surface for each sun height. Use this to explain why dawn and dusk dives are darker, even in clear water.'
       },
       {
         set: 'Sun 30°',
-        q: 'At what angle from the vertical does the refracted sunlight travel? What is the largest this angle can ever be, and what does that mean for where underwater light comes from?',
-        a: 'About <b>41°</b> (40.5°). Even with the sun on the horizon, light can only bend to the critical angle, <b>48.6°</b>. All daylight underwater arrives within 48.6° of vertical, so it always comes from above.'
+        q: 'At what angle from the vertical does the refracted sunlight travel? What is the largest this angle can ever be, and what does that mean for where underwater light comes from?'
       },
       {
         set: 'Snell’s window on · Depth 10 m, then 20 m',
-        q: 'Snell’s window is always 97° wide. Calculate its radius on the surface at 10 m and at 20 m (radius = depth × tan 48.6°). What does a diver see outside the window?',
-        a: '<b>11.3 m</b> at 10 m and <b>22.7 m</b> at 20 m. The radius doubles when the depth doubles, but the angle stays 97°. Outside the window the surface acts as a mirror (total internal reflection) and shows the underwater scene. The 97° is the same limit found for a flat port in tab 2, Q3.'
+        q: 'Snell’s window is always 97° wide. Calculate its radius on the surface at 10 m and at 20 m (radius = depth × tan 48.6°). What does a diver see outside the window?'
       },
       {
         set: 'Turbidity: Coastal · Depth 5, 10, 20 m',
-        q: 'Complete a table of the percentage of red (650 nm), green (550 nm) and blue (450 nm) light left at each depth. Which colour disappears first, and which gets furthest?',
-        a: '5 m: red <b>14%</b>, green <b>61%</b>, blue <b>55%</b>. 10 m: <b>1.8%</b>, <b>37%</b>, <b>30%</b>. 20 m: <b>0.03%</b>, <b>14%</b>, <b>9.1%</b>. Red goes first (down to 10% by 5.8 m). In coastal water green gets furthest, just ahead of blue.'
+        q: 'Complete a table of the percentage of red (650 nm), green (550 nm) and blue (450 nm) light left at each depth. Which colour disappears first, and which gets furthest?'
       },
       {
         set: 'Depth 5 m · Turbidity: Clear ocean, Coastal, Turbid estuary',
-        q: 'Using the spectrum bars, find the most abundant colour at 5 m in each water type, and the depth where red falls to 10%. Why do coastal and estuarine waters look green or brown rather than blue?',
-        a: 'Open ocean: <b>blue</b> (~450 nm); red falls to 10% by <b>6.4 m</b>. Coastal: <b>blue-green</b> (~500 nm), <b>5.8 m</b>. Turbid estuary: <b>green-yellow</b> (~550 nm), <b>2.7 m</b>. Pure water absorbs red. Dissolved organic matter (CDOM) and phytoplankton also absorb blue, and suspended sediment scatters light, so the window of best transmission shifts from blue toward green and yellow.'
+        q: 'Using the spectrum bars, find the most abundant colour at 5 m in each water type, and the depth where red falls to 10%. Why do coastal and estuarine waters look green or brown rather than blue?'
       },
       {
         set: 'Turbidity: Coastal · Depth 10 m · Strobe off · Camera 0.5 m, then 4 m',
-        q: 'Compare the recorded colour slate at the two distances. The depth hasn’t changed, so why are the colours worse from 4 m?',
-        a: 'Light reflected by the slate has to travel horizontally to the camera, and water absorbs red along that path too. The total water path is the depth plus the camera distance. At 4 m an extra e^(−0.40 × 4) ≈ <b>20%</b> of the remaining red survives, so reds turn grey-blue. Hence the rule: get close.'
+        q: 'Compare the recorded colour slate at the two distances. The depth hasn’t changed, so why are the colours worse from 4 m?'
       },
       {
         set: 'Turbidity: Coastal · Depth 20 m · Strobe on, beside the lens · Camera 0.5, 1.5, 4 m',
-        q: 'What happens to the red patch as the camera moves away? Strobe light goes to the slate and back. Using Kd(650) ≈ 0.40 m⁻¹, calculate how much red survives the round trip at 0.5 m and 4 m.',
-        a: '0.5 m: e^(−0.40 × 1) ≈ <b>67%</b>. 1.5 m: ≈ <b>30%</b>. 4 m: e^(−0.40 × 8) ≈ <b>4%</b>. The inverse-square law makes it worse: at 4 m the strobe delivers about 1/64 of the light it gives at 0.5 m. The red patch is red close up and loses its colour at 4 m, so strobes only restore colour within a metre or two.'
+        q: 'What happens to the red patch as the camera moves away? Strobe light goes to the slate and back. Using Kd(650) ≈ 0.40 m⁻¹, calculate how much red survives the round trip at 0.5 m and 4 m.'
       },
       {
         set: 'Turbidity: Turbid estuary · Strobe on · Camera 1.5 m · Beside the lens, then out on arms · Repeat at 3 m',
-        q: 'Record the backscatter specks in frame for each set-up. Explain why moving the strobe changes the count, and why getting closer helps too.',
-        a: 'At 1.5 m: <b>16 → 4</b> specks. At 3 m: <b>67 → 26</b>. Beside the lens, the beam lights particles right in front of the lens, and these appear large and bright in the frame. On long arms, angled outward, only the edge of the beam crosses the lens’s view, near the subject, so far fewer particles are lit. A shorter distance also means less water, and fewer particles, between lens and subject.'
+        q: 'Record the backscatter specks in frame for each set-up. Explain why moving the strobe changes the count, and why getting closer helps too.'
       },
       {
         set: 'Turbidity: Coastal · Strobe off · Camera 1.5 m · Depth 15 m, then 30 m · Custom white balance on/off',
-        q: 'Which patches does custom white balance improve at 15 m? Why can’t it bring back the red patch at 30 m?',
-        a: 'At 15 m it makes the white patch neutral and partly restores warm colours by amplifying the weak red channel. At 30 m almost no red light is left: e^(−0.40 × 30) ≈ 0.0006% at 650 nm, before the extra path to the camera. Amplifying almost nothing gives almost nothing, and in a real camera, noise. The lab caps the gain at 8×. Only adding light, with a strobe, brings red back.'
+        q: 'Which patches does custom white balance improve at 15 m? Why can’t it bring back the red patch at 30 m?'
       },
       {
         set: 'Depth 10 m · Drag turbidity slowly from Clear ocean to Turbid estuary',
-        q: 'Watch the most penetrating colour in the “Say it in class” notes and the blue light readout. Where on the slider does the best-transmitted colour change from blue to blue-green, and then to green? What happens to blue light at 10 m, and why?',
-        a: 'It changes from <b>blue (450 nm) to blue-green (500 nm)</b> about a quarter of the way along, where the slider reads <b>Clear coastal</b>, and to <b>green (550 nm)</b> about two-thirds of the way along, at <b>Murky coastal</b>. Blue light left at 10 m falls from <b>83%</b> in clear ocean to <b>30%</b> in coastal water and to effectively <b>0%</b> in the turbid estuary. Dissolved organic matter and phytoplankton absorb blue strongly, and suspended sediment scatters and absorbs light. So the more turbid the water, the further the colour window shifts toward green and yellow, and the faster all light fades.'
+        q: 'Watch the “Most penetrating colour” and blue light readouts. Where on the slider does the best-transmitted colour change from blue to blue-green, and then to green? What happens to blue light at 10 m, and why?'
       }
     ]
   }
@@ -2008,27 +1951,18 @@ function buildWorksheet(modIndex) {
     <div class="ws-head">
       <h3 id="ws-${modIndex}-h">${ws.title}</h3>
       <div class="ws-actions">
-        <button type="button" class="vbtn" id="ws-${modIndex}-ans" aria-pressed="false">Show model answers</button>
         <button type="button" class="vbtn" id="ws-${modIndex}-copy">Copy questions</button>
       </div>
     </div>
     <p class="ws-note">${ws.note}</p>
     <ol class="ws-list">${ws.items.map(it => `
-      <li><span class="set">${it.set}</span><p class="q">${it.q}</p>
-        <div class="ans" hidden><span class="ans-l">Model answer</span>${it.a}</div></li>`).join('')}
+      <li><span class="set">${it.set}</span><p class="q">${it.q}</p></li>`).join('')}
     </ol>
     <textarea class="ws-copy" id="ws-${modIndex}-text" readonly hidden aria-label="Worksheet questions as text"></textarea>`;
   mod.appendChild(sec);
   const jump = el('button', { type: 'button', class: 'jump', id: `ws-${modIndex}-jump` }, 'Worksheet ↓');
   jump.addEventListener('click', () => sec.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }));
   mod.firstElementChild.appendChild(jump);
-  const ansBtn = sec.querySelector(`#ws-${modIndex}-ans`);
-  ansBtn.addEventListener('click', () => {
-    const on = ansBtn.getAttribute('aria-pressed') !== 'true';
-    ansBtn.setAttribute('aria-pressed', String(on));
-    ansBtn.textContent = on ? 'Hide model answers' : 'Show model answers';
-    sec.querySelectorAll('.ans').forEach(a => { a.hidden = !on; });
-  });
   const text = `${ws.title}\n${ws.note}\n\n` + ws.items.map((it, i) => `${i + 1}. [${stripTags(it.set)}] ${stripTags(it.q)}`).join('\n\n');
   const copyBtn = sec.querySelector(`#ws-${modIndex}-copy`), ta = sec.querySelector('textarea');
   copyBtn.addEventListener('click', () => {

@@ -10,7 +10,7 @@ An interactive 3D lab for teaching underwater imaging, made for the OS207 *Light
 2. **Behind the port** – a camera housing on a seagrass bed. Compare flat and dome ports: apparent distance and size, angle of view, colour fringing and the dome's virtual image.
 3. **Light in water** – a cut-away water column. Surface reflection and refraction, Snell's window, colour loss with depth, a turbidity slider from clear ocean to turbid estuary, strobes, backscatter and white balance.
 
-Tabs 2 and 3 include worksheets. Model answers are hidden behind a "Show model answers" button.
+Tabs 2 and 3 include worksheets for students. Model answers and teaching notes are not published here; they live in the lecturer's offline teaching guide.
 
 Link straight to a tab with `#focus`, `#port` or `#light` at the end of the address.
 
