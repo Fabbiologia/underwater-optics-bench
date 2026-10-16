@@ -6,14 +6,15 @@ An interactive 3D lab for teaching underwater imaging, made for the OS207 *Light
 
 ## What's in it
 
-1. **Photons and water** – a micro view of water molecules. Fire photons of different colours into the water and see why red is absorbed within a few metres while blue travels much further: each photon's energy is compared with the steps of O–H vibration a water molecule can absorb.
-2. **Focus in air** – a thin lens on an optical bench. Move the focus, aperture and focal length and watch each subject's cone of light converge in front of, on or behind the sensor, with a simulated photo showing the blur.
-3. **Behind the port** – a camera housing on a seagrass bed. Compare flat and dome ports: apparent distance and size, angle of view, colour fringing and the dome's virtual image.
-4. **Light in water** – a cut-away water column. Surface reflection and refraction, Snell's window, colour loss with depth, a turbidity slider from clear ocean to turbid estuary, strobes, backscatter and white balance.
+1. **Hearing the spectrum** – every colour of light played as a note, 40 octaves lower, so pitch rises with the energy of each photon. Sweep from red to violet, compare red and blue, and extend into ultraviolet and infrared.
+2. **Photons and water** – a micro view of water molecules. Fire photons of different colours into the water and see why red is absorbed within a few metres while blue travels much further: each photon's energy is compared with the steps of O–H vibration a water molecule can absorb.
+3. **Focus in air** – a thin lens on an optical bench. Move the focus, aperture and focal length and watch each subject's cone of light converge in front of, on or behind the sensor, with a simulated photo showing the blur.
+4. **Behind the port** – a camera housing on a seagrass bed. Compare flat and dome ports: apparent distance and size, angle of view, colour fringing and the dome's virtual image.
+5. **Light in water** – a cut-away water column. Surface reflection and refraction, Snell's window, colour loss with depth, a turbidity slider from clear ocean to turbid estuary, strobes, backscatter and white balance.
 
-Tabs 3 and 4 include worksheets for students. Model answers and teaching notes are not published here; they live in the lecturer's offline teaching guide.
+Tabs 4 and 5 include worksheets for students. Model answers and teaching notes are not published here; they live in the lecturer's offline teaching guide.
 
-Link straight to a tab with `#photons`, `#focus`, `#port` or `#light` at the end of the address.
+Link straight to a tab with `#sound`, `#photons`, `#focus`, `#port` or `#light` at the end of the address. The first tab plays tones through the speakers, but only after you press a button or the keyboard.
 
 ## Notes
 

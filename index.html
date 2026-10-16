@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Underwater Optics Bench</title>
-<meta name="description" content="Interactive 3D lab: why water absorbs red light first, how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
+<meta name="description" content="Interactive 3D lab: hear the energy of each colour of light, see why water absorbs red light first, how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
 <meta property="og:title" content="Underwater Optics Bench">
-<meta property="og:description" content="Interactive 3D lab: why water absorbs red light first, how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
+<meta property="og:description" content="Interactive 3D lab: hear the energy of each colour of light, see why water absorbs red light first, how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
 <meta property="og:type" content="website">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -137,8 +137,41 @@
   .btn:hover { border-color: var(--muted); }
   .btn.primary { color: var(--ink); background: var(--amber); border-color: var(--amber); }
   .btn.primary:hover { filter: brightness(1.08); }
+  .btn[aria-pressed="true"] { color: var(--ink); background: var(--text); border-color: var(--text); }
   .how { gap: 10px; }
   .how li { max-width: 62ch; }
+
+  /* flat tabs swap the 3D view for a 2D instrument */
+  .sound-stage { position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center; gap: 14px; padding: 60px 20px 20px; overflow-y: auto; }
+  #stage.flat .sound-stage { display: flex; }
+  #stage.flat #gl, #stage.flat #labels, #stage.flat .viewbar, #stage.flat .hint { display: none; }
+  .hs-box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 10px; }
+  #hs-keys { display: block; width: 100%; height: clamp(200px, 36vh, 330px); touch-action: none; cursor: pointer; border-radius: 6px; }
+  #hs-waves { display: block; width: 100%; height: clamp(120px, 19vh, 180px); }
+  .wl-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 10px; }
+  .wl-row label { font: 600 14px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .wl-row input { width: 100%; accent-color: var(--amber); }
+  .wl-row output { font: 600 15px var(--mono); color: var(--amber); min-width: 7ch; text-align: right; font-variant-numeric: tabular-nums; }
+  .hs-big { display: flex; align-items: center; gap: 14px; }
+  .hs-swatch { width: 56px; height: 56px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(255, 255, 255, .12), 0 0 28px var(--glow, transparent); }
+  .hs-big .nm { font: 700 46px/0.9 var(--display); font-variant-numeric: tabular-nums; }
+  .hs-big .name { font: 600 16px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .readouts dd small { display: block; font: 400 12px var(--mono); color: var(--muted); }
+  #hs-ebar { display: block; width: 100%; height: 54px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; font: 600 13.5px/1 var(--display); letter-spacing: .06em; text-transform: uppercase;
+    color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--muted); }
+  .chip i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; background: var(--c); box-shadow: 0 0 0 1px rgba(255, 255, 255, .2); }
+  .ctrl .hs-hint { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--muted); }
+  .hs-status { min-height: 1.5em; margin: 0; font-size: 14.5px; color: var(--amber); }
+  .explain p { margin: 0; max-width: 62ch; }
+  .explain b { color: var(--amber); font-weight: 600; }
+  .explain .formula { justify-self: start; align-self: flex-start; font: 600 17px var(--mono); background: var(--panel-2); border-radius: 8px; padding: 10px 12px; }
+  .explain .note { border-top: 1px solid var(--line); padding-top: 12px; font-size: 14.5px; color: var(--muted); }
+  .explain .note b { color: var(--text); }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
   @media (max-width: 900px) {
@@ -147,6 +180,9 @@
     aside { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
     .hint { display: none; }
     .scalenote { max-width: 90%; }
+    .sound-stage { justify-content: flex-start; padding-top: 72px; }
+    #hs-keys { height: 200px; }
+    #hs-waves { height: 120px; }
   }
 </style>
 </head>
@@ -157,10 +193,11 @@
   <header>
     <div class="brand">Underwater Optics Bench<small>OS207 · Light &amp; imaging lab</small></div>
     <nav class="tabs" role="tablist" aria-label="Experiments">
-      <button class="tab" role="tab" id="tab-0" aria-selected="true" data-mod="0"><span class="n">1</span>Photons and water</button>
-      <button class="tab" role="tab" id="tab-1" aria-selected="false" data-mod="1"><span class="n">2</span>Focus in air</button>
-      <button class="tab" role="tab" id="tab-2" aria-selected="false" data-mod="2"><span class="n">3</span>Behind the port</button>
-      <button class="tab" role="tab" id="tab-3" aria-selected="false" data-mod="3"><span class="n">4</span>Light in water</button>
+      <button class="tab" role="tab" id="tab-0" aria-selected="true" data-mod="0"><span class="n">1</span>Hearing the spectrum</button>
+      <button class="tab" role="tab" id="tab-1" aria-selected="false" data-mod="1"><span class="n">2</span>Photons and water</button>
+      <button class="tab" role="tab" id="tab-2" aria-selected="false" data-mod="2"><span class="n">3</span>Focus in air</button>
+      <button class="tab" role="tab" id="tab-3" aria-selected="false" data-mod="3"><span class="n">4</span>Behind the port</button>
+      <button class="tab" role="tab" id="tab-4" aria-selected="false" data-mod="4"><span class="n">5</span>Light in water</button>
     </nav>
   </header>
   <main>
@@ -650,7 +687,7 @@ function makeCameraBody(extra = {}) {
   front.rotation.y = -Math.PI / 2; front.position.x = 0.07; g.add(front);
   return shadowy(g);
 }
-/* compact underwater rig for tab 4: housing, dome port with shade, tray, handles, ball mounts; faces -x */
+/* compact underwater rig for tab 5: housing, dome port with shade, tray, handles, ball mounts; faces -x */
 function makeUWRig() {
   const g = new THREE.Group();
   const W = m => uwify(m, false);
@@ -924,7 +961,414 @@ const fmt = (v, d = 1) => Number(v).toFixed(d);
 const fmtDist = m => m >= 1 ? fmt(m, 2) + ' m' : Math.round(m * 100) + ' cm';
 
 /* =====================================================================
-   MODULE 0 — PHOTONS AND WATER (why water absorbs red light)
+   MODULE S — HEARING THE SPECTRUM (photon energy as pitch)
+   Every light frequency is divided by 2⁴⁰ (lowered 40 octaves) so it falls in the audible range.
+   Ratios survive the transposition, so pitch tracks the energy of each photon.
+   A flat tab: the 3D view is hidden and a 2D instrument takes the stage.
+   ===================================================================== */
+const MS = (() => {
+  const HC_EV_NM = 1239.841984;          // h × c in eV·nm
+  const C_NM_THZ = 299792.458;           // c in nm·THz
+  const EV_J = 1.602176634e-19;
+  const DOWN = Math.pow(2, 40);          // 40 octaves
+  const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  const RANGES = { visible: { min: 380, max: 750, lo: 64, hi: 79 }, extended: { min: 280, max: 1100, lo: 58, hi: 84 } };
+  const PRESETS = [['Red', 650], ['Orange', 600], ['Yellow', 580], ['Green', 530], ['Blue', 470], ['Violet', 410]];
+  const PRESETS_EXT = [['UV-B', 300], ['UV-A', 365], ['Near IR', 850]];
+  const st = { wl: 530, ext: false, bright: 0.7, playing: false, sweeping: false };
+  try { const s = JSON.parse(localStorage.getItem('hearing-spectrum') || '{}'); if (typeof s.ext === 'boolean') st.ext = s.ext; } catch (e) { /* storage unavailable */ }
+
+  /* ---------- physics ---------- */
+  const lightTHz = wl => C_NM_THZ / wl;
+  const energyEV = wl => HC_EV_NM / wl;
+  const soundHz = wl => lightTHz(wl) * 1e12 / DOWN;
+  const wlFromHz = hz => C_NM_THZ / (hz * DOWN / 1e12);
+  const midiOf = hz => 69 + 12 * Math.log2(hz / 440);
+  const hzOfMidi = m => 440 * Math.pow(2, (m - 69) / 12);
+  function noteName(hz) {
+    const m = midiOf(hz), n = Math.round(m), cents = Math.round((m - n) * 100);
+    return { name: NOTES[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1), cents };
+  }
+  function colourName(wl) {
+    if (wl < 280) return 'Ultraviolet C';
+    if (wl < 315) return 'Ultraviolet B';
+    if (wl < 380) return 'Ultraviolet A';
+    if (wl < 450) return 'Violet';
+    if (wl < 485) return 'Blue';
+    if (wl < 500) return 'Cyan';
+    if (wl < 565) return 'Green';
+    if (wl < 590) return 'Yellow';
+    if (wl < 625) return 'Orange';
+    if (wl <= 750) return 'Red';
+    return 'Near infrared';
+  }
+  // approximate sRGB for a wavelength (after Bruton), dimmed towards the ends of human vision
+  function rgbOf(wl) {
+    let r = 0, g = 0, b = 0;
+    if (wl >= 380 && wl < 440) { r = (440 - wl) / 60; b = 1; }
+    else if (wl >= 440 && wl < 490) { g = (wl - 440) / 50; b = 1; }
+    else if (wl >= 490 && wl < 510) { g = 1; b = (510 - wl) / 20; }
+    else if (wl >= 510 && wl < 580) { r = (wl - 510) / 70; g = 1; }
+    else if (wl >= 580 && wl < 645) { r = 1; g = (645 - wl) / 65; }
+    else if (wl >= 645 && wl <= 750) { r = 1; }
+    const f = wl < 380 || wl > 750 ? 0 : wl < 420 ? 0.3 + 0.7 * (wl - 380) / 40 : wl > 700 ? 0.3 + 0.7 * (750 - wl) / 50 : 1;
+    return [r, g, b].map(c => Math.round(255 * Math.pow(c * f, 0.8)));
+  }
+  const css = ([r, g, b], a = 1) => `rgba(${r},${g},${b},${a})`;
+  const isVisible = wl => wl >= 380 && wl <= 750;
+  const colourOf = wl => isVisible(wl) ? css(rgbOf(wl)) : '#F2B64E';
+
+  /* ---------- stage: the instrument, and red against the chosen colour as waves ---------- */
+  const box = el('div', { class: 'sound-stage' });
+  box.innerHTML = `
+    <div class="hs-box">
+      <canvas id="hs-keys" role="img" aria-label="The spectrum laid over a keyboard: red on the left at lower pitch, violet on the right at higher pitch. Press or drag to play a wavelength."></canvas>
+      <div class="wl-row"><label for="hs-wl">Wavelength</label><input type="range" id="hs-wl" min="-750" max="-380" step="1" value="-530"><output id="hs-wl-o" for="hs-wl">530 nm</output></div>
+    </div>
+    <div class="hs-box"><canvas id="hs-waves" role="img" aria-label="Red light and the chosen colour drawn as waves over the same few femtoseconds"></canvas></div>`;
+  stage.appendChild(box);
+  const keys = box.querySelector('#hs-keys'), kctx = keys.getContext('2d');
+  const waves = box.querySelector('#hs-waves'), wctx = waves.getContext('2d');
+  const wlIn = box.querySelector('#hs-wl'), wlOut = box.querySelector('#hs-wl-o');
+
+  /* ---------- panel ---------- */
+  const m = modShell(0, 'Hearing the spectrum', 'Every colour of light, played as a note. The pitch rises exactly as the energy of each photon does, so you can hear why blue light carries more energy than red.');
+  const now = groupBox(m, 'This colour');
+  now.insertAdjacentHTML('beforeend', '<div class="hs-big"><span class="hs-swatch" id="hs-sw"></span><div><div class="nm" id="hs-nm">530 nm</div><div class="name" id="hs-name">Green</div></div></div>');
+  const readEl = el('dl', { class: 'readouts' }); now.appendChild(readEl);
+  const ebar = el('canvas', { id: 'hs-ebar', role: 'img', 'aria-label': 'Energy per photon on a scale from 0 to 4.5 electronvolts' }); now.appendChild(ebar);
+  const ectx = ebar.getContext('2d');
+  const playBox = groupBox(m, 'Play');
+  const row = el('div', { class: 'btnrow' });
+  const playBtn = el('button', { type: 'button', class: 'btn primary', id: 'hs-play', 'aria-pressed': 'false' }, 'Play tone');
+  const sweepBtn = el('button', { type: 'button', class: 'btn', id: 'hs-sweep' }, 'Sweep red → violet');
+  const cmpBtn = el('button', { type: 'button', class: 'btn', id: 'hs-compare' }, 'Red vs blue');
+  row.append(playBtn, sweepBtn, cmpBtn); playBox.appendChild(row);
+  const chips = el('div', { class: 'chips', role: 'group', 'aria-label': 'Jump to a colour' }); playBox.appendChild(chips);
+  slider(playBox, { id: 'hs-bright', label: 'Brightness', min: 0, max: 100, step: 1, value: 70, fmt: v => v + '%' }, v => {
+    st.bright = v / 100;
+    if (master) master.gain.setTargetAtTime(loud(), ac.currentTime, 0.03);
+  });
+  playBox.lastElementChild.appendChild(el('p', { class: 'hs-hint' }, 'More photons per second, so the note is louder. Each photon’s energy, and the pitch, stay the same.'));
+  toggle(playBox, { id: 'hs-ext', label: 'Show ultraviolet and infrared', value: st.ext }, v => { st.ext = v; applyRange(); });
+  const statusEl = el('p', { class: 'hs-status', role: 'status', 'aria-live': 'polite' }); playBox.appendChild(statusEl);
+  const why = groupBox(m, 'What you are hearing');
+  why.classList.add('explain');
+  why.insertAdjacentHTML('beforeend', `
+    <p>Light is an electromagnetic wave. Its frequency sets the energy of each photon:</p>
+    <div class="formula">E = h × f = h × c ÷ λ</div>
+    <p>Shorter wavelength means higher frequency and more energy. Here every light frequency is lowered by exactly <b>40 octaves</b> (divided by 2⁴⁰, about 1.1 × 10¹²) so it falls in the range you can hear. Ratios survive the transposition: a note twice as high is a photon with twice the energy.</p>
+    <p>The whole rainbow fits inside <b>one octave</b>: violet photons carry less than twice the energy of red ones.</p>
+    <ol class="ws-list how">
+      <li>Press <b>Sweep</b>: the pitch climbs from red to violet but stays within one octave.</li>
+      <li>Press <b>Red vs blue</b>: a blue photon carries 1.44 times the energy of a red one.</li>
+      <li>Turn on ultraviolet and play <b>UV-B</b> (300 nm): 2.3 times the energy of red light.</li>
+      <li>Turn the <b>brightness</b> down: the note gets quieter but keeps its pitch.</li>
+    </ol>
+    <p class="note"><b>Underwater:</b> water strips red light first, but not because red photons are weak: they match vibrations of the water molecule, as the next tab shows. At the other end, UV-B photons carry about 4 eV, enough to damage DNA directly, which is why UV matters for corals and for divers’ skin.</p>`);
+
+  /* ---------- audio ---------- */
+  let ac = null, master = null, tone = null;
+  const voices = new Set(), timers = [];
+  const loud = () => 0.32 * Math.pow(st.bright, 1.5);
+  function audio() {
+    if (!ac) {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = loud(); master.connect(ac.destination);
+    }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function voice(hz, start, stop) {
+    const o = ac.createOscillator(), g = ac.createGain(), v = { o, g };
+    o.type = 'triangle'; o.frequency.setValueAtTime(hz, start);
+    g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(1, start + 0.04);
+    o.connect(g).connect(master); o.start(start);
+    if (stop) { g.gain.setValueAtTime(1, Math.max(start + 0.05, stop - 0.08)); g.gain.linearRampToValueAtTime(0, stop); o.stop(stop + 0.02); }
+    voices.add(v); o.onended = () => voices.delete(v);
+    return v;
+  }
+  function startTone() { audio(); if (!tone) tone = voice(soundHz(st.wl), ac.currentTime); }
+  function stopTone() {
+    if (!tone) return;
+    const t = ac.currentTime, { o, g } = tone;
+    g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.08);
+    o.stop(t + 0.12); tone = null;
+  }
+  function glideTo(wl) { if (tone) tone.o.frequency.setTargetAtTime(soundHz(wl), ac.currentTime, 0.012); }
+  function blip(wl, len = 0.55) { audio(); const t = ac.currentTime + 0.01; voice(soundHz(wl), t, t + len); }
+
+  /* ---------- drawing ---------- */
+  let W = 0, H = 0, dpr = 1;
+  const range = () => st.ext ? RANGES.extended : RANGES.visible;
+  function xOfHz(hz) { const R = range(); return (midiOf(hz) - (R.lo - 0.5)) / (R.hi - R.lo + 1) * W; }
+  const xOfWl = wl => xOfHz(soundHz(wl));
+  function hzOfX(x) { const R = range(); return hzOfMidi(R.lo - 0.5 + x / W * (R.hi - R.lo + 1)); }
+  const fit = c => { const r = c.getBoundingClientRect(); if (r.width < 10 || r.height < 10) return null; c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); return r; };
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = fit(keys); if (r) { W = r.width; H = r.height; }
+    fit(waves); fit(ebar);
+    draw();
+  }
+  const BAND_TOP = 26, BAND_H = 74, KEY_TOP = 108;
+  function drawKeys() {
+    if (W < 10 || H < 10 || !keys.width) return;
+    const R = range(), ctx = kctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    // spectrum band, one column per pixel
+    for (let x = 0; x < W; x++) {
+      const wl = wlFromHz(hzOfX(x + 0.5));
+      ctx.fillStyle = isVisible(wl) ? css(rgbOf(wl)) : wl < 380 ? '#1b1430' : '#2a1012';
+      ctx.fillRect(x, BAND_TOP, 1, BAND_H);
+    }
+    // hatching over the invisible parts
+    const xv1 = xOfWl(750), xv2 = xOfWl(380);
+    for (const [a, b] of [[0, Math.max(0, xv1)], [Math.min(W, xv2), W]]) {
+      if (b - a < 2) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(a, BAND_TOP, b - a, BAND_H); ctx.clip();
+      ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1;
+      for (let k = -BAND_H; k < W; k += 9) { ctx.moveTo(k, BAND_TOP + BAND_H); ctx.lineTo(k + BAND_H, BAND_TOP); }
+      ctx.stroke(); ctx.restore();
+    }
+    ctx.font = '600 12px "Barlow Condensed", sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    if (st.ext) {
+      ctx.fillStyle = 'rgba(227,236,234,.7)';
+      if (xv1 > 60) ctx.fillText('INFRARED · INVISIBLE', xv1 / 2, BAND_TOP + BAND_H / 2);
+      if (W - xv2 > 60) ctx.fillText('ULTRAVIOLET · INVISIBLE', (xv2 + W) / 2, BAND_TOP + BAND_H / 2);
+    }
+    // wavelength ticks
+    ctx.fillStyle = '#8BA2A6'; ctx.strokeStyle = 'rgba(227,236,234,.45)'; ctx.lineWidth = 1; ctx.font = '600 11px "JetBrains Mono", monospace';
+    const ticks = st.ext ? [1100, 900, 800, 700, 600, 500, 400, 350, 300] : [750, 700, 650, 600, 550, 500, 450, 400];
+    for (const t of ticks) {
+      const x = xOfWl(t); if (x < 18 || x > W - 18) continue;
+      ctx.beginPath(); ctx.moveTo(x, BAND_TOP - 6); ctx.lineTo(x, BAND_TOP); ctx.stroke();
+      ctx.fillText(t + (t === ticks[0] ? ' nm' : ''), x, BAND_TOP - 14);
+    }
+    // chromatic keyboard: one equal cell per semitone, so pitch and the spectrum share one axis
+    const n = R.hi - R.lo + 1, cw = W / n, curMidi = Math.round(midiOf(soundHz(st.wl)));
+    for (let k = R.lo; k <= R.hi; k++) {
+      const x = (k - R.lo) * cw, black = [1, 3, 6, 8, 10].includes(((k % 12) + 12) % 12);
+      const wl = wlFromHz(hzOfMidi(k)), on = k === curMidi;
+      const kh = black ? (H - KEY_TOP - 28) * 0.62 : H - KEY_TOP - 28;
+      ctx.fillStyle = on ? (isVisible(wl) ? css(rgbOf(wl)) : '#F2B64E') : black ? '#3b4a50' : '#d7dfdd';
+      ctx.fillRect(x + 1, KEY_TOP, cw - 2, kh);
+      if (black && !on) { ctx.fillStyle = '#56676d'; ctx.fillRect(x + 1, KEY_TOP, cw - 2, 3); }
+      if (!on && !black && isVisible(wl)) { ctx.fillStyle = css(rgbOf(wl), 0.55); ctx.fillRect(x + 1, KEY_TOP + kh - 6, cw - 2, 6); }
+    }
+    // octave labels under each C, plus the visible-light span
+    ctx.fillStyle = '#8BA2A6'; ctx.font = '600 11px "JetBrains Mono", monospace';
+    for (let k = R.lo; k <= R.hi; k++) if (((k % 12) + 12) % 12 === 0) ctx.fillText('C' + (Math.floor(k / 12) - 1), (k - R.lo + 0.5) * cw, H - 18);
+    const ya = H - 5;
+    ctx.strokeStyle = 'rgba(242,182,78,.8)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(xv1, ya - 5); ctx.lineTo(xv1, ya); ctx.lineTo(xv2, ya); ctx.lineTo(xv2, ya - 5); ctx.stroke();
+    ctx.font = '600 11.5px "Barlow Condensed", sans-serif';
+    const lab = 'VISIBLE LIGHT: JUST UNDER ONE OCTAVE', tw = ctx.measureText(lab).width + 12;
+    if (xv2 - xv1 > tw + 10) { ctx.fillStyle = '#0F1A1E'; ctx.fillRect((xv1 + xv2) / 2 - tw / 2, ya - 7, tw, 14); ctx.fillStyle = '#F2B64E'; ctx.fillText(lab, (xv1 + xv2) / 2, ya); }
+    // marker
+    const mx = xOfWl(st.wl);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mx, BAND_TOP - 2); ctx.lineTo(mx, KEY_TOP + 6); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(mx, BAND_TOP + BAND_H / 2, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = colourOf(st.wl);
+    ctx.beginPath(); ctx.arc(mx, BAND_TOP + BAND_H / 2, 4.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // red light against the chosen colour over the same instant: more cycles means more energy per photon
+  function drawWaves() {
+    if (!waves.width) return;
+    const w = waves.width / dpr, h = waves.height / dpr, ctx = wctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    // wide: labels in a column on the left; narrow (phones): labels above each wave
+    const compact = w < 520, x0 = compact ? 4 : 150, x1 = w - 64, span = 4 * 700;   // four periods of 700 nm red
+    const fs = 4 / lightTHz(700) * 1000, ms = fs * 1e-15 * DOWN * 1000;
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    ctx.font = '600 11.5px "Barlow Condensed", sans-serif'; ctx.fillStyle = '#8BA2A6';
+    ctx.fillText(compact ? `SAME ${fs.toFixed(1)} fs OF LIGHT (${ms.toFixed(1)} ms OF SOUND)` : `THE SAME ${fs.toFixed(1)} FEMTOSECONDS OF LIGHT (${ms.toFixed(1)} MS OF SOUND)`, 4, 13);
+    ctx.textAlign = 'right'; ctx.fillText('ENERGY VS RED', w - 4, 13); ctx.textAlign = 'left';
+    const rowH = (h - 22) / 2;
+    [[700, 'Red'], [st.wl, colourName(st.wl)]].forEach(([wl, name], i) => {
+      const cy = 22 + rowH * (i + (compact ? 0.62 : 0.5)), amp = Math.min(20, rowH * (compact ? 0.26 : 0.36)), cycles = span / wl;
+      ctx.strokeStyle = 'rgba(227,236,234,.12)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0, cy); ctx.lineTo(x1, cy); ctx.stroke();
+      ctx.strokeStyle = colourOf(wl); ctx.lineWidth = 2.5; ctx.beginPath();
+      for (let x = x0; x <= x1; x++) { const y = cy - amp * Math.sin((x - x0) / (x1 - x0) * cycles * 2 * Math.PI); x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.stroke();
+      const label = `${name.toUpperCase()} · ${Math.round(wl)} NM`, freq = `${lightTHz(wl).toFixed(0)} THz → ${Math.round(soundHz(wl))} Hz`;
+      if (compact) {
+        ctx.fillStyle = '#E3ECEA'; ctx.font = '600 12px "Barlow Condensed", sans-serif';
+        ctx.fillText(label, 4, cy - amp - 7);
+        const lw = ctx.measureText(label).width;
+        ctx.fillStyle = '#8BA2A6'; ctx.font = '600 10px "JetBrains Mono", monospace';
+        ctx.fillText(freq, 12 + lw, cy - amp - 7);
+      } else {
+        ctx.fillStyle = '#E3ECEA'; ctx.font = '600 13px "Barlow Condensed", sans-serif';
+        ctx.fillText(label, 4, cy - 3);
+        ctx.fillStyle = '#8BA2A6'; ctx.font = '600 10.5px "JetBrains Mono", monospace';
+        ctx.fillText(freq, 4, cy + 12);
+      }
+      ctx.fillStyle = i ? '#F2B64E' : '#E3ECEA'; ctx.font = '600 14px "JetBrains Mono", monospace'; ctx.textAlign = 'right';
+      ctx.fillText(`${(700 / wl).toFixed(2)}×`, w - 4, cy + 5); ctx.textAlign = 'left';
+    });
+  }
+  // energy per photon on a 0–4.5 eV scale
+  function drawEnergy() {
+    if (!ebar.width) return;
+    const w = ebar.width / dpr, h = ebar.height / dpr, max = 4.5, X = e => 6 + (w - 12) * e / max, ctx = ectx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    const y = 8, bh = 14;
+    for (let x = 0; x < w - 12; x++) {
+      const e = x / (w - 12) * max, wl = HC_EV_NM / Math.max(e, 0.01);
+      ctx.fillStyle = isVisible(wl) ? css(rgbOf(wl)) : wl > 750 ? '#2a1012' : '#1b1430';
+      ctx.fillRect(6 + x, y, 1, bh);
+    }
+    ctx.fillStyle = '#8BA2A6'; ctx.font = '600 11px "JetBrains Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let e = 0; e <= 4; e++) { ctx.fillRect(X(e) - 0.5, y + bh + 2, 1, 4); ctx.fillText(e + ' eV', X(e), y + bh + 9); }
+    const ex = X(Math.min(energyEV(st.wl), max));
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.moveTo(ex, y + bh - 1); ctx.lineTo(ex - 6, y - 7); ctx.lineTo(ex + 6, y - 7); ctx.closePath(); ctx.fill();
+  }
+  function draw() { drawKeys(); drawWaves(); drawEnergy(); }
+
+  /* ---------- readouts ---------- */
+  function render() {
+    const wl = st.wl, e = energyEV(wl), hz = soundHz(wl), note = noteName(hz), rgb = isVisible(wl) ? rgbOf(wl) : null;
+    wlOut.textContent = `${Math.round(wl)} nm`;
+    document.getElementById('hs-nm').textContent = `${Math.round(wl)} nm`;
+    document.getElementById('hs-name').textContent = colourName(wl) + (rgb ? '' : ' · invisible to us');
+    const sw = document.getElementById('hs-sw');
+    sw.style.background = rgb ? css(rgb) : 'repeating-linear-gradient(45deg, #1b1430 0 6px, #2a2040 6px 12px)';
+    sw.style.setProperty('--glow', rgb ? css(rgb, 0.55) : 'transparent');
+    readEl.innerHTML = [
+      ['Light frequency', `${lightTHz(wl).toFixed(1)} THz`],
+      ['Energy per photon', `${e.toFixed(2)} eV<small>${(e * EV_J * 1e19).toFixed(2)} × 10⁻¹⁹ J</small>`],
+      ['Compared with red light (700 nm)', `${(700 / wl).toFixed(2)} ×`],
+      ['Note you hear', `${Math.round(hz)} Hz<small>${note.name}, ${note.cents >= 0 ? '+' : '−'}${Math.abs(note.cents)} cents</small>`]
+    ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+    wlIn.setAttribute('aria-valuetext', `${Math.round(wl)} nanometres, ${colourName(wl)}, ${e.toFixed(2)} electronvolts`);
+    draw();
+  }
+  function setWl(wl, opts = {}) {
+    const R = range();
+    st.wl = Math.min(R.max, Math.max(R.min, wl));
+    wlIn.value = -Math.round(st.wl);
+    glideTo(st.wl);
+    if (opts.blip && !tone) blip(st.wl);
+    render();
+  }
+  const setStatus = t => { statusEl.textContent = t; };
+
+  /* ---------- controls ---------- */
+  function buildChips() {
+    chips.innerHTML = '';
+    for (const [name, wl] of (st.ext ? PRESETS.concat(PRESETS_EXT) : PRESETS)) {
+      const b = el('button', { type: 'button', class: 'chip', 'aria-label': `${name}, ${wl} nanometres` }, `<i></i>${name} ${wl}`);
+      b.style.setProperty('--c', isVisible(wl) ? css(rgbOf(wl)) : (wl < 380 ? '#6b4fb3' : '#8a2b2b'));
+      b.addEventListener('click', () => { setWl(wl, { blip: true }); setStatus(`${name} light: ${energyEV(wl).toFixed(2)} eV per photon, ${(700 / wl).toFixed(2)} times red.`); });
+      chips.appendChild(b);
+    }
+  }
+  function applyRange() {
+    const R = range();
+    wlIn.min = -R.max; wlIn.max = -R.min;
+    buildChips();
+    setWl(st.wl);
+    try { localStorage.setItem('hearing-spectrum', JSON.stringify({ ext: st.ext })); } catch (e) { /* storage unavailable */ }
+  }
+  wlIn.addEventListener('input', () => setWl(-parseFloat(wlIn.value)));
+  function setPlaying(on) {
+    st.playing = on;
+    playBtn.setAttribute('aria-pressed', String(on));
+    playBtn.textContent = on ? 'Stop tone' : 'Play tone';
+    if (on) startTone(); else stopTone();
+  }
+  playBtn.addEventListener('click', () => setPlaying(!st.playing));
+
+  let sweepRaf = 0;
+  sweepBtn.addEventListener('click', () => {
+    if (st.sweeping) { endSweep(); return; }
+    const from = 700, to = 400, dur = reduceMotion ? 2.5 : 5;
+    st.sweeping = true; sweepBtn.textContent = 'Stop sweep';
+    const wasPlaying = st.playing;
+    if (!wasPlaying) startTone();
+    setWl(from);
+    const t0 = performance.now(), f0 = Math.log(soundHz(from)), f1 = Math.log(soundHz(to));
+    setStatus('Red to violet: the pitch climbs, but less than one octave.');
+    const step = nowT => {
+      const u = Math.min(1, (nowT - t0) / (dur * 1000));
+      setWl(wlFromHz(Math.exp(f0 + (f1 - f0) * u)));
+      if (u < 1 && st.sweeping) sweepRaf = requestAnimationFrame(step);
+      else endSweep(wasPlaying);
+    };
+    sweepRaf = requestAnimationFrame(step);
+  });
+  function endSweep(keep = st.playing, quiet = false) {
+    cancelAnimationFrame(sweepRaf);
+    st.sweeping = false; sweepBtn.textContent = 'Sweep red → violet';
+    if (!(keep || st.playing)) stopTone();
+    if (!quiet) setStatus(`Violet (400 nm) carries ${(700 / 400).toFixed(2)} times the energy of red (700 nm).`);
+  }
+
+  cmpBtn.addEventListener('click', () => {
+    if (st.sweeping) endSweep(false);
+    if (st.playing) setPlaying(false);
+    audio();
+    timers.splice(0).forEach(clearTimeout);
+    const t = ac.currentTime + 0.02, red = 650, blue = 450;
+    voice(soundHz(red), t, t + 0.75);
+    voice(soundHz(blue), t + 0.9, t + 1.65);
+    voice(soundHz(red), t + 1.85, t + 3.1); voice(soundHz(blue), t + 1.85, t + 3.1);
+    setWl(red); setStatus('Red, 650 nm…');
+    timers.push(setTimeout(() => { setWl(blue); setStatus('…then blue, 450 nm…'); }, 900));
+    timers.push(setTimeout(() => setStatus(`…then both. A blue photon carries ${(red / blue).toFixed(2)} times the energy of a red one.`), 1850));
+  });
+
+  // press and drag on the instrument to play it; pressing a key plays that exact note
+  let dragging = false, held = false, downAt = 0;
+  function pick(ev, snap) {
+    const r = keys.getBoundingClientRect(), x = Math.max(0, Math.min(W, ev.clientX - r.left)), y = ev.clientY - r.top;
+    if (snap && y > KEY_TOP) {
+      const R = range(), k = R.lo + Math.min(R.hi - R.lo, Math.floor(x / (W / (R.hi - R.lo + 1))));
+      setWl(wlFromHz(hzOfMidi(k)));
+    } else setWl(wlFromHz(hzOfX(x)));
+  }
+  function release() {
+    if (!dragging) return;
+    dragging = false;
+    if (held) { held = false; const wait = Math.max(0, 350 - (performance.now() - downAt)); setTimeout(() => { if (!st.playing && !st.sweeping) stopTone(); }, wait); }
+  }
+  keys.addEventListener('pointerdown', ev => {
+    if (st.sweeping) return;
+    dragging = true; downAt = performance.now(); keys.setPointerCapture(ev.pointerId);
+    pick(ev, true);
+    if (!st.playing) { held = true; startTone(); }
+  });
+  keys.addEventListener('pointermove', ev => { if (dragging) pick(ev, false); });
+  keys.addEventListener('pointerup', release);
+  keys.addEventListener('pointercancel', release);
+
+  // silence everything when the tab is left
+  function leave() {
+    if (st.sweeping) endSweep(false, true);
+    if (st.playing) setPlaying(false);
+    stopTone(); dragging = held = false;
+    timers.splice(0).forEach(clearTimeout);
+    voices.forEach(v => { try { v.g.disconnect(); } catch (e) { /* already gone */ } });
+    voices.clear(); setStatus('');
+  }
+
+  const ro = new ResizeObserver(resize);
+  [keys, waves, ebar].forEach(c => ro.observe(c));
+  applyRange();
+  return {
+    group: new THREE.Group(), ov: new THREE.Group(), flat: true, update: render, leave,
+    scale: 'Light frequency ÷ 2⁴⁰ = sound frequency · 40 octaves lower, so the pitch rises with each photon’s energy'
+  };
+})();
+
+/* =====================================================================
+   MODULE 0 — PHOTONS AND WATER (why water absorbs red light), tab 2
    Schematic micro view: molecules about 1.3 units apart stand in for 0.3 nm, while along the
    beam 1 unit = 0.27 m, so the block is about 5 m of water. Absorption uses pure-water
    coefficients (Pope and Fry 1997; infrared approximate).
@@ -1014,12 +1458,12 @@ const HALF_HOH = rad(104.5 / 2), OH_LEN = 0.62, WAVE_N = 34;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
     s.visible = false; M0.ov.add(s); M0.flashes.push({ s, t: 1 });
   }
-  const L1 = mkLabel(0, 'Light enters the water', '#E3ECEA'); L1.pos.set(SLAB.x0 + 1.8, SLAB.h + 0.7, 0);
-  const L2 = mkLabel(0, 'Deeper water →', '#8BA2A6'); L2.pos.set(SLAB.x1 - 1.6, SLAB.h + 0.7, 0);
+  const L1 = mkLabel(1, 'Light enters the water', '#E3ECEA'); L1.pos.set(SLAB.x0 + 1.8, SLAB.h + 0.7, 0);
+  const L2 = mkLabel(1, 'Deeper water →', '#8BA2A6'); L2.pos.set(SLAB.x1 - 1.6, SLAB.h + 0.7, 0);
   const score = m => m.p.z - Math.abs(m.p.x) * 0.15 - Math.abs(m.p.y + 2) * 0.2;
   const front = M0.mols.reduce((a, b) => (score(b) > score(a) ? b : a));
-  const L3 = mkLabel(0, 'Water molecule · H₂O', '#E3ECEA'); L3.pos.copy(front.p).add(V(0, 0.6, 0));
-  M0.absLabel = mkLabel(0, '', '#F2B64E'); M0.absLabel.show = false;
+  const L3 = mkLabel(1, 'Water molecule · H₂O', '#E3ECEA'); L3.pos.copy(front.p).add(V(0, 0.6, 0));
+  M0.absLabel = mkLabel(1, '', '#F2B64E'); M0.absLabel.show = false;
   m0Tick(0, 0);
 })();
 
@@ -1200,7 +1644,7 @@ function m0Reach() {
 }
 
 (function panelM0() {
-  const m = modShell(0, 'Why water absorbs red light', 'Light travels as photons, and each photon carries a packet of energy set by its colour. A water molecule can only take in energy in fixed steps, by making its O\u2060–\u2060H bonds vibrate harder. Fire photons into the water and watch which colours get through.');
+  const m = modShell(1, 'Why water absorbs red light', 'Light travels as photons, and each photon carries a packet of energy set by its colour. A water molecule can only take in energy in fixed steps, by making its O\u2060–\u2060H bonds vibrate harder. Fire photons into the water and watch which colours get through.');
   const g = groupBox(m, 'Controls');
   segmented(g, { id: 'm0-col', label: 'Photons', value: 'white', options: [['white', '<span class="sw rainbow"></span>White light'], ...PHOTON_TYPES.map(p => [p.key, `<span class="sw" style="background:${p.col}"></span>${p.name}`])] },
     v => { M0.st.colour = v; M0.absLabel.show = false; M0.absLabelT = 0; m0Update(); });
@@ -1310,13 +1754,13 @@ function opticPost(g, x, yTop, base = -2.42) {
     g.add(f); s.mesh = f;
     opticPost(g, x, s.y - 0.18);
     dot(M1.ov, V(x, s.y, 0), '#ffffff', 0.05);
-    s.label = mkLabel(1, `${s.name} · ${s.d} m`, s.color);
+    s.label = mkLabel(2, `${s.name} · ${s.d} m`, s.color);
     s.label.pos.set(x, s.y + 0.5, 0);
   });
-  M1.lensLabel = mkLabel(1, 'Lens + aperture'); M1.lensLabel.pos.set(0, 2.25, 0);
-  M1.sensorLabel = mkLabel(1, 'Sensor');
+  M1.lensLabel = mkLabel(2, 'Lens + aperture'); M1.lensLabel.pos.set(0, 2.25, 0);
+  M1.sensorLabel = mkLabel(2, 'Sensor');
   M1.focalDot = dot(M1.ov, V(0, 0, 0), '#E3ECEA', 0.05);
-  M1.focalLabel = mkLabel(1, 'f (focus at ∞)', '#8BA2A6'); M1.focalLabel.lift = -1;
+  M1.focalLabel = mkLabel(2, 'f (focus at ∞)', '#8BA2A6'); M1.focalLabel.lift = -1;
 })();
 M1.env = () => {
   setSky({ top: '#3a474d', hor: '#1a2226', bot: '#07090a', boxes: true });
@@ -1413,7 +1857,7 @@ function m1Inset(f) {
   ctx.fillText(`${f} mm · f/${N} · focus ${fmtDist(M1.st.focus)}`, 10, h - 10);
 }
 (function panelM1() {
-  const m = modShell(1, 'Why a camera must focus', 'A thin lens on an optical bench. Move the focus and watch where each fish’s cone of light comes to a point, and what that does to the photo.');
+  const m = modShell(2, 'Why a camera must focus', 'A thin lens on an optical bench. Move the focus and watch where each fish’s cone of light comes to a point, and what that does to the photo.');
   const g = groupBox(m, 'Controls');
   const focusSl = slider(g, { id: 'm1-focus', label: 'Focus distance', min: 0, max: 1000, step: 1, value: 1000 * Math.log(1.2 / 0.3) / Math.log(5 / 0.3), fmt: v => fmtDist(0.3 * (5 / 0.3) ** (v / 1000)) }, v => { M1.st.focus = 0.3 * (5 / 0.3) ** (v / 1000); m1Update(); });
   slider(g, { id: 'm1-ap', label: 'Aperture', min: 0, max: FSTOPS.length - 1, step: 1, value: M1.st.Ni, fmt: v => 'f/' + FSTOPS[v] }, v => { M1.st.Ni = v; m1Update(); });
@@ -1503,11 +1947,11 @@ function makeSeagrass(count, area, len, seed) {
   // fish and its virtual image
   M2.fish = makeFish({ back: '#C99A12', flank: '#EBC02E', belly: '#FFF6D2', pattern: 'bars', accent: '#6E4F05', water: true, swim: 0.05, phase: 0, freq: 6 }); M2.fish.scale.setScalar(4); M2.fish.rotation.y = Math.PI / 2 - 0.75; g.add(M2.fish);
   M2.ghost = makeFish({ back: '#F2D15A', flank: '#F6DE84', belly: '#FFF7DA', opacity: 0.3, swim: 0.05, phase: 0, freq: 6 }); M2.ghost.rotation.y = Math.PI / 2 - 0.75; M2.ov.add(M2.ghost);
-  M2.fishLabel = mkLabel(2, 'Real fish', '#F2D15A');
-  M2.ghostLabel = mkLabel(2, 'Where the camera sees it', '#F2B64E');
-  M2.portLabel = mkLabel(2, 'Flat port');
-  M2.fovLabel = mkLabel(2, '', '#43A9C6'); M2.fovLabel.lift = -1;
-  M2.airLabel = mkLabel(2, '', '#F2B64E');
+  M2.fishLabel = mkLabel(3, 'Real fish', '#F2D15A');
+  M2.ghostLabel = mkLabel(3, 'Where the camera sees it', '#F2B64E');
+  M2.portLabel = mkLabel(3, 'Flat port');
+  M2.fovLabel = mkLabel(3, '', '#43A9C6'); M2.fovLabel.lift = -1;
+  M2.airLabel = mkLabel(3, '', '#F2B64E');
 })();
 M2.env = () => {
   const wet = M2.st.medium === 'water';
@@ -1736,7 +2180,7 @@ function m2Inset(o) {
   ctx.fillText(`${water ? 'underwater' : 'in air'} · ${st.port} port · ${st.fov}° lens`, 10, h - 10);
 }
 (function panelM2() {
-  const m = modShell(2, 'What the port does underwater', 'The same camera in a housing. Light has to cross the port from water into air before it reaches the lens, and the port’s shape decides what happens.');
+  const m = modShell(3, 'What the port does underwater', 'The same camera in a housing. Light has to cross the port from water into air before it reaches the lens, and the port’s shape decides what happens.');
   const g = groupBox(m, 'Controls');
   segmented(g, { id: 'm2-medium', label: 'Housing is in', value: 'water', options: [['water', 'Water'], ['air', 'Air']] }, v => { M2.st.medium = v; m2Update(); });
   segmented(g, { id: 'm2-port', label: 'Port type', value: 'flat', options: [['flat', 'Flat port'], ['dome', 'Dome port']] }, v => { M2.st.port = v; m2Update(); });
@@ -1858,7 +2302,7 @@ const M3 = {
       f.scale.setScalar(1.1); g.add(f);
       M3.fish.push({ f, c: V(-9.5 + k * 0.8, -dm / 2 + (i - 1) * 0.3, 1.5 - k * 0.4), R: 1.6 + i * 0.35, w: 0.3 + i * 0.04, ph: i * 2.1 + k });
     }
-    const L = mkLabel(3, `Red fish · ${dm} m`, '#F0735A'); L.pos.set(-9.5 + k * 0.8, -dm / 2 + 1.0, 1.5 - k * 0.4);
+    const L = mkLabel(4, `Red fish · ${dm} m`, '#F0735A'); L.pos.set(-9.5 + k * 0.8, -dm / 2 + 1.0, 1.5 - k * 0.4);
   });
   // depth staff on the cut face
   M3.colCanvas = document.createElement('canvas'); M3.colCanvas.width = 4; M3.colCanvas.height = 256;
@@ -1867,9 +2311,9 @@ const M3 = {
   staff.position.set(-13, -10, 6.1); M3.ov.add(staff);
   for (let m = 0; m <= 40; m += 5) {
     seg(M3.ov, V(-13.3, -m / 2, 6.2), V(-12.4, -m / 2, 6.2), '#E3ECEA', 0.022, 0.9);
-    const L = mkLabel(3, `${m} m`, '#8BA2A6'); L.pos.set(-14.1, -m / 2, 6.2); L.lift = -1;
+    const L = mkLabel(4, `${m} m`, '#8BA2A6'); L.pos.set(-14.1, -m / 2, 6.2); L.lift = -1;
   }
-  M3.staffLabel = mkLabel(3, 'Daylight left', '#E3ECEA'); M3.staffLabel.pos.set(-13, 0.9, 6.2);
+  M3.staffLabel = mkLabel(4, 'Daylight left', '#E3ECEA'); M3.staffLabel.pos.set(-13, 0.9, 6.2);
   // sea surface: animated waves that reflect the sky
   const sm = new THREE.MeshPhysicalMaterial({ color: lin('#0c4a5a'), roughness: 0.05, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, transparent: true, opacity: 0.55, envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false });
   sm.onBeforeCompile = sh => {
@@ -1884,13 +2328,13 @@ const M3 = {
   const rim = new THREE.Mesh(new THREE.BoxGeometry(80, 0.04, 0.04), basicMat('#bfe6f0', 0.5)); rim.position.set(0, 0, 6); M3.ov.add(rim);
   M3.sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: SPRITE, color: lin('#ffe2a0'), blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   M3.sun.scale.setScalar(5); M3.ov.add(M3.sun);
-  M3.sunLabel = mkLabel(3, 'Sun', '#FFD98A');
-  M3.camLabel = mkLabel(3, 'Camera', '#E3ECEA');
-  M3.slateLabel = mkLabel(3, 'Colour slate', '#E3ECEA');
-  M3.snellLabel = mkLabel(3, "Snell's window · 97°", '#FFD98A');
-  M3.tirLabel = mkLabel(3, 'Mirror (total internal reflection)', '#8BA2A6'); M3.tirLabel.lift = -1;
-  M3.reflLabel = mkLabel(3, '', '#FFD98A');
-  M3.refrLabel = mkLabel(3, '', '#FFD98A'); M3.refrLabel.lift = -1;
+  M3.sunLabel = mkLabel(4, 'Sun', '#FFD98A');
+  M3.camLabel = mkLabel(4, 'Camera', '#E3ECEA');
+  M3.slateLabel = mkLabel(4, 'Colour slate', '#E3ECEA');
+  M3.snellLabel = mkLabel(4, "Snell's window · 97°", '#FFD98A');
+  M3.tirLabel = mkLabel(4, 'Mirror (total internal reflection)', '#8BA2A6'); M3.tirLabel.lift = -1;
+  M3.reflLabel = mkLabel(4, '', '#FFD98A');
+  M3.refrLabel = mkLabel(4, '', '#FFD98A'); M3.refrLabel.lift = -1;
   // marine snow through the column, plus the particles the strobe can light
   const pm = () => new THREE.PointsMaterial({ size: 0.13, map: SPRITE, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false });
   M3.snowGeo = new THREE.BufferGeometry(); M3.ov.add(new THREE.Points(M3.snowGeo, pm()));
@@ -2152,7 +2596,7 @@ function m3Inset(L, pf, C) {
   ctx.fillText(`${st.strobe ? 'strobe' : 'ambient'} · ${st.wb ? 'custom WB' : 'daylight WB'}`, 10, h - 8);
 }
 (function panelM3() {
-  const m = modShell(3, 'What water does to light', 'Sunlight enters the sea, bends, and loses its colours one by one. Put a colour slate at depth and see what the camera actually records.');
+  const m = modShell(4, 'What water does to light', 'Sunlight enters the sea, bends, and loses its colours one by one. Put a colour slate at depth and see what the camera actually records.');
   const g = groupBox(m, 'Controls');
   const turbIn = slider(g, { id: 'm3-turb', label: 'Turbidity', min: 0, max: 100, step: 1, value: 50, fmt: v => waterLabel(v) }, v => {
     const snap = [0, 50, 100].find(a => Math.abs(a - v) <= 3);
@@ -2176,10 +2620,10 @@ function m3Inset(L, pf, C) {
 })();
 
 /* =====================================================================
-   WORKSHEETS — tabs 3 and 4. Questions use the numbers this lab displays.
+   WORKSHEETS — tabs 4 and 5 (module indices 3 and 4). Questions use the numbers this lab displays.
    ===================================================================== */
 const WORKSHEETS = {
-  2: {
+  3: {
     title: 'Worksheet: behind the port',
     note: 'Set the controls as each question says, then read the numbers off the readouts under the viewfinder.',
     items: [
@@ -2217,7 +2661,7 @@ const WORKSHEETS = {
       }
     ]
   },
-  3: {
+  4: {
     title: 'Worksheet: light in water',
     note: 'Set the controls as each question says. The turbidity slider clicks into place at Clear ocean, Coastal and Turbid estuary. Use the readouts, the spectrum bars in the camera view and the 3D column.',
     items: [
@@ -2292,11 +2736,12 @@ function buildWorksheet(modIndex) {
     try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
   });
 }
-buildWorksheet(2);
 buildWorksheet(3);
+buildWorksheet(4);
 panel.appendChild(el('footer', { class: 'credit' }, '© 2026 Fabio Favoretto · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a> · 3D by <a href="https://threejs.org/" target="_blank" rel="noopener">three.js</a>'));
 /* ---------- module switching ---------- */
 const MODS = [
+  { m: MS, update: MS.update, views: () => M0.viewsFn() },
   { m: M0, update: m0Update, views: () => M0.viewsFn() },
   { m: M1, update: m1Update, views: () => M1.views },
   { m: M2, update: m2Update, views: () => M2.viewsFn() },
@@ -2304,14 +2749,16 @@ const MODS = [
 ];
 let active = 0;
 const scaleNote = document.getElementById('scalenote');
-const TAB_KEYS = ['photons', 'focus', 'port', 'light'];
+const TAB_KEYS = ['sound', 'photons', 'focus', 'port', 'light'];
 function setMod(i, instant) {
+  if (i !== active && MODS[active].m.leave) MODS[active].m.leave();
   active = i;
+  stage.classList.toggle('flat', !!MODS[i].m.flat);
   MODS.forEach((o, k) => { o.m.group.visible = o.m.ov.visible = k === i; document.getElementById('mod-' + k).hidden = k !== i; });
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(+t.dataset.mod === i)));
-  orb.azLim = i === 3 ? 1.2 : null;
-  if (i === 0) M0.env();
-  if (i === 1) M1.env();
+  orb.azLim = i === 4 ? 1.2 : null;
+  if (i === 1) M0.env();
+  if (i === 2) M1.env();
   MODS[i].update();
   scaleNote.textContent = MODS[i].m.scale;
   goTo(MODS[i].views().d3, instant);
@@ -2350,8 +2797,8 @@ function frame() {
   const t = reduceMotion ? 0 : clock.getElapsedTime();
   UW.uTime.value = t;
   WAG.forEach(o => { o.pivot.rotation.y = Math.sin(t * o.speed + o.phase) * o.amp; });
-  if (active === 0) m0Tick(frameDt, t);
-  if (active === 3) M3.fish.forEach(o => {
+  if (active === 1) m0Tick(frameDt, t);
+  if (active === 4) M3.fish.forEach(o => {
     const a = o.ph + t * o.w;
     o.f.position.set(o.c.x + Math.cos(a) * o.R, o.c.y + Math.sin(a * 2.3) * 0.08, o.c.z + Math.sin(a) * o.R * 0.6);
     o.f.rotation.y = Math.atan2(-Math.cos(a) * o.R * 0.6, -Math.sin(a) * o.R);
@@ -2359,11 +2806,13 @@ function frame() {
   if (M3.turbNow !== M3.st.turb) {
     const dT = M3.st.turb - M3.turbNow;
     M3.turbNow = Math.abs(dT) < 0.4 ? M3.st.turb : M3.turbNow + dT * (1 - Math.exp(-frameDt / 0.16));
-    if (active === 3) m3Update();
+    if (active === 4) m3Update();
   }
-  if (envDirty && performance.now() - envAt > 150) rebuildEnv();
-  renderFrame();
-  placeLabels(w, h);
+  if (!MODS[active].m.flat) {
+    if (envDirty && performance.now() - envAt > 150) rebuildEnv();
+    renderFrame();
+    placeLabels(w, h);
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
