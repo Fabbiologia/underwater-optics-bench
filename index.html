@@ -895,7 +895,7 @@ function placeLabels(w, h) {
     if (_pv.z > 1 || Math.abs(_pv.x) > 1.3 || Math.abs(_pv.y) > 1.3) { L.el.hidden = true; continue; }
     L.el.hidden = false;
     const x = (_pv.x + 1) / 2 * w, y = (1 - _pv.y) / 2 * h;
-    L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, ${L.lift > 0 ? '-135%' : '35%'})`;
+    L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, ${L.lift > 0 ? '-135%' : L.lift < 0 ? '35%' : '-50%'})`;
   }
 }
 
@@ -1369,23 +1369,43 @@ const MS = (() => {
 
 /* =====================================================================
    MODULE 0 — PHOTONS AND WATER (why water absorbs red light), tab 2
-   Schematic micro view: molecules about 1.3 units apart stand in for 0.3 nm, while along the
-   beam 1 unit = 0.27 m, so the block is about 5 m of water. Absorption uses pure-water
-   coefficients (Pope and Fry 1997; infrared approximate).
+   A sunlit column of pure water drawn at molecular scale. Sunlight is a mix of photons of every
+   colour; each photon keeps its colour until a molecule absorbs it, so the light left turns blue
+   with depth because the red photons are taken out first. Absorption uses pure-water coefficients
+   (Pope and Fry 1997; infrared approximate). Not to scale: the column stands for 60 m of water,
+   while the molecules are drawn enormous.
    ===================================================================== */
 const MOL_SPACING = 0.31e-9;   // average distance between neighbouring water molecules, m
-const M_PER_UNIT = 0.272;      // metres of water per scene unit along the beam
+const COL = { top: 7, bottom: -8, hw: 4, hd: 2, depthM: 60 };   // the sea surface is at y = top
+const M_PER_UNIT = COL.depthM / (COL.top - COL.bottom);          // 4 m of water per scene unit
+const SUN_Y = 10.6;
+const binW = nm => BINW[WL.indexOf(nm)];
+// colours match the spectrum bars of the Light in water tab
 const PHOTON_TYPES = [
-  { key: 'ir', name: 'Infrared', wl: 1000, a: 40, col: '#B5473E' },
-  { key: 'red', name: 'Red', wl: 650, a: 0.34, col: '#FF4B3E' },
-  { key: 'orange', name: 'Orange', wl: 600, a: 0.222, col: '#FF9933' },
-  { key: 'yellow', name: 'Yellow', wl: 580, a: 0.0896, col: '#FFE23D' },
-  { key: 'green', name: 'Green', wl: 530, a: 0.042, col: '#45E06A' },
-  { key: 'blue', name: 'Blue', wl: 450, a: 0.0092, col: '#3F7CFF' },
-  { key: 'violet', name: 'Violet', wl: 400, a: 0.0066, col: '#A061FF' }
+  { key: 'ir', name: 'Infrared', wl: 1000, a: 40, col: '#8E2A24' },
+  { key: 'red', name: 'Red', wl: 650, a: 0.34, col: '#F0402C', w: binW(650) },
+  { key: 'orange', name: 'Orange', wl: 600, a: 0.2224, col: '#F5A623', w: binW(600) },
+  { key: 'green', name: 'Green', wl: 550, a: 0.0565, col: '#5CD65C', w: binW(550) },
+  { key: 'cyan', name: 'Cyan', wl: 500, a: 0.0204, col: '#18B6C9', w: binW(500) },
+  { key: 'blue', name: 'Blue', wl: 450, a: 0.0092, col: '#3D5BFF', w: binW(450) },
+  { key: 'violet', name: 'Violet', wl: 400, a: 0.0066, col: '#7B3FD1', w: binW(400) }
 ];
 const PT = Object.fromEntries(PHOTON_TYPES.map(p => [p.key, p]));
-const VISIBLE = PHOTON_TYPES.filter(p => p.key !== 'ir');
+const SUNLIGHT = PHOTON_TYPES.filter(p => p.w);   // the six visible colours that make up white light here
+// glows are weighted so that equal numbers of the six colours add up to white
+(() => {
+  const sum = [0, 1, 2].map(c => SUNLIGHT.reduce((s, p) => s + p.w[c], 0));
+  SUNLIGHT.forEach(p => { p.glow = new THREE.Color(...p.w.map((v, c) => 2 * v / sum[c])); });
+  PT.ir.glow = lin(PT.ir.col);
+})();
+// colour and share of the sunlight photons left at a depth in metres (linear; white at the surface)
+function sunlightAt(dm) {
+  const c = new THREE.Color(0, 0, 0);
+  SUNLIGHT.forEach(p => c.add(p.glow.clone().multiplyScalar(Math.exp(-p.a * dm) / 2)));
+  return c;
+}
+const photonsLeft = dm => SUNLIGHT.reduce((s, p) => s + Math.exp(-p.a * dm), 0) / SUNLIGHT.length;
+const hueHex = c => '#' + c.clone().multiplyScalar(1 / Math.max(c.r, c.g, c.b, 1e-6)).convertLinearToSRGB().getHexString();
 /* O–H stretch overtones of liquid water: rung n holds n quanta of O–H stretching. Band centre (nm) and
    approximate peak absorption (m⁻¹), after Hale and Querry (1973), Kou et al. (1993), Pope and Fry (1997). */
 const RUNGS = [
@@ -1402,14 +1422,13 @@ function rungsFor(e) {
 const sig2 = x => Number(x.toPrecision(2));
 const fmtLen = m => m < 1 ? `${sig2(m * 100)} cm` : `${sig2(m)} m`;
 const fmtCount = n => n >= 1e9 ? `about ${sig2(n / 1e9)} billion` : `about ${sig2(n / 1e6)} million`;
-const SLAB = { x0: -9, x1: 9, h: 4.2, d: 2.6 };
 const M0 = {
   group: new THREE.Group(), ov: new THREE.Group(),
-  st: { colour: 'white', speed: 1, stream: false },
-  scale: 'Not to scale · the block stands for about 5 m of pure water; real molecules are only 0.3 nm apart, so a red photon passes billions of them before one absorbs it',
-  mols: [], photons: [], heat: [], flashes: [], tally: {}, spawnAcc: 0, tallyDirty: true, absLabelT: 0
+  st: { colour: 'sun', speed: 1, stream: false },
+  scale: 'Not to scale · the column stands for 60 m of pure water; real molecules are only 0.3 nm apart',
+  mols: [], photons: [], heat: [], flashes: [], rays: [], tally: {}, spawnAcc: 0, tallyDirty: true, absLabelT: 0, rayN: 0
 };
-PHOTON_TYPES.forEach(p => { M0.tally[p.key] = { abs: 0, pass: 0 }; });
+PHOTON_TYPES.forEach(p => { M0.tally[p.key] = { abs: 0, pass: 0, depth: 0 }; });
 const GLOW = canvasTex(64, 64, (ctx) => {
   const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,.6)'); g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -1417,18 +1436,46 @@ const GLOW = canvasTex(64, 64, (ctx) => {
 }, false);
 
 const _o = new THREE.Object3D(), _q = new THREE.Quaternion(), _qw = new THREE.Quaternion(), _c = new THREE.Color();
-const HALF_HOH = rad(104.5 / 2), OH_LEN = 0.62, WAVE_N = 34;
+const HALF_HOH = rad(104.5 / 2), OH_LEN = 0.62, WAVE_N = 34, MAXP = 220;
 (function buildM0() {
   world.add(M0.group); overlay.add(M0.ov);
-  // the water: a faint tinted block with edges, so it is clear where light enters and leaves
-  const slabGeo = new THREE.BoxGeometry(SLAB.x1 - SLAB.x0, SLAB.h * 2, SLAB.d * 2);
-  M0.ov.add(new THREE.Mesh(slabGeo, new THREE.MeshBasicMaterial({ color: lin('#1F7A8C'), transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide })));
-  M0.ov.add(new THREE.LineSegments(new THREE.EdgesGeometry(slabGeo), new THREE.LineBasicMaterial({ color: lin('#43A9C6'), transparent: true, opacity: 0.4 })));
+  // the water column, with the sea surface on top
+  const H = COL.top - COL.bottom, cy = (COL.top + COL.bottom) / 2;
+  const colGeo = new THREE.BoxGeometry(COL.hw * 2, H, COL.hd * 2);
+  const water = new THREE.Mesh(colGeo, new THREE.MeshBasicMaterial({ color: lin('#1F7A8C'), transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide }));
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(colGeo), new THREE.LineBasicMaterial({ color: lin('#43A9C6'), transparent: true, opacity: 0.4 }));
+  water.position.y = edges.position.y = cy; M0.ov.add(water, edges);
+  const surf = new THREE.Mesh(new THREE.PlaneGeometry(COL.hw * 2, COL.hd * 2), new THREE.MeshBasicMaterial({ color: lin('#8FD3E8'), transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide }));
+  surf.rotation.x = -Math.PI / 2; surf.position.y = COL.top; M0.ov.add(surf);
+  // the sun, and its light falling on the surface
+  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: new THREE.Color(1, 0.93, 0.8), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sun.position.set(0, SUN_Y, 0); sun.scale.setScalar(3.6); M0.ov.add(sun);
+  dot(M0.ov, V(0, SUN_Y, 0), '#FFF6E2', 0.5);
+  for (let k = -2; k <= 2; k++) dashed(M0.ov, V(k * 0.5, SUN_Y - 0.8, 0), V(k * 1.15, COL.top, 0), '#FFF1D2', 0.012, 0.35, 0.25, 0.18);
+  // depth ruler down the front left edge
+  const xr = -COL.hw - 0.5;
+  seg(M0.ov, V(xr, COL.top, COL.hd), V(xr, COL.bottom, COL.hd), '#8BA2A6', 0.02, 0.8);
+  for (let d = 0; d <= COL.depthM; d += 10) {
+    const y = COL.top - d / M_PER_UNIT;
+    seg(M0.ov, V(xr - 0.3, y, COL.hd), V(xr, y, COL.hd), '#8BA2A6', 0.02, 0.8);
+    const L = mkLabel(1, `${d} m`, '#8BA2A6'); L.pos.set(xr - 1.25, y, COL.hd); L.lift = 0;
+  }
+  // the colour of the sunlight left at each depth, worked out from the same absorption values
+  const xs = COL.hw + 0.85, sw = 0.6, n = 60, pos = [], col = [], idx = [];
+  for (let i = 0; i <= n; i++) {
+    const d = COL.depthM * i / n, y = COL.top - d / M_PER_UNIT, c = sunlightAt(d);
+    pos.push(xs - sw / 2, y, COL.hd, xs + sw / 2, y, COL.hd);
+    col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+    if (i < n) idx.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2);
+  }
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); sg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); sg.setIndex(idx);
+  M0.ov.add(new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })));
   // molecules at random positions, never closer than 1.55 units (real water is denser; this keeps the photons visible)
   srand(77);
   const pts = [];
-  for (let tries = 0; pts.length < 140 && tries < 30000; tries++) {
-    const p = V(SLAB.x0 + 0.6 + rnd() * (SLAB.x1 - SLAB.x0 - 1.2), -SLAB.h + 0.6 + rnd() * (2 * SLAB.h - 1.2), -SLAB.d + 0.5 + rnd() * (2 * SLAB.d - 1.0));
+  for (let tries = 0; pts.length < 160 && tries < 30000; tries++) {
+    const p = V(-COL.hw + 0.55 + rnd() * (2 * COL.hw - 1.1), COL.bottom + 0.55 + rnd() * (H - 1.1), -COL.hd + 0.45 + rnd() * (2 * COL.hd - 0.9));
     if (pts.every(q => q.distanceToSquared(p) > 1.55 * 1.55)) pts.push(p);
   }
   const N = pts.length;
@@ -1443,75 +1490,102 @@ const HALF_HOH = rad(104.5 / 2), OH_LEN = 0.62, WAVE_N = 34;
     M0.oMesh.setColorAt(i, M0.oBase);
   });
   M0.oMesh.instanceColor.needsUpdate = true;
-  // photons as glowing heads and wave packets, plus heat specks and absorption flashes
-  const glowPts = (n, size, onTop) => {
+  // photon glows draw over the molecules so they never get lost in the crowd
+  const glowPts = (count, size, onTop) => {
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
-    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3), 3).setUsage(THREE.DynamicDrawUsage));
     g.setDrawRange(0, 0);
     const o = new THREE.Points(g, new THREE.PointsMaterial({ size, map: GLOW, vertexColors: true, transparent: true, depthWrite: false, depthTest: !onTop, blending: THREE.AdditiveBlending }));
     o.frustumCulled = false; M0.ov.add(o); return o;
   };
-  // photon glows draw over the molecules so they never get lost in the crowd
-  M0.waveP = glowPts(80 * WAVE_N, 0.46, true); M0.headP = glowPts(80, 1.7, true); M0.coreP = glowPts(80, 0.62, true); M0.heatP = glowPts(400, 0.3);
-  for (let k = 0; k < 12; k++) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
-    s.visible = false; M0.ov.add(s); M0.flashes.push({ s, t: 1 });
-  }
-  const L1 = mkLabel(1, 'Light enters the water', '#E3ECEA'); L1.pos.set(SLAB.x0 + 1.8, SLAB.h + 0.7, 0);
-  const L2 = mkLabel(1, 'Deeper water →', '#8BA2A6'); L2.pos.set(SLAB.x1 - 1.6, SLAB.h + 0.7, 0);
-  const score = m => m.p.z - Math.abs(m.p.x) * 0.15 - Math.abs(m.p.y + 2) * 0.2;
+  M0.waveP = glowPts(MAXP * WAVE_N, 0.42, true); M0.headP = glowPts(MAXP, 1.5, true); M0.coreP = glowPts(MAXP, 0.55, true); M0.heatP = glowPts(500, 0.3);
+  const sprite = () => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
+    s.visible = false; M0.ov.add(s); return s;
+  };
+  for (let k = 0; k < 16; k++) M0.flashes.push({ s: sprite(), t: 1 });
+  M0.halos = Array.from({ length: 6 }, sprite);
+  const LSun = mkLabel(1, 'Sunlight · every colour', '#FFE7B0'); LSun.pos.set(4.8, SUN_Y, 0); LSun.lift = 0;
+  const LSurf = mkLabel(1, 'Sea surface', '#8FD3E8'); LSurf.pos.set(-COL.hw + 1.7, COL.top + 0.35, COL.hd);
+  const LStrip = mkLabel(1, 'Sunlight left', '#E3ECEA'); LStrip.pos.set(xs, COL.top + 0.35, COL.hd);
+  const score = m => m.p.z - Math.abs(m.p.x - 1) * 0.15 - Math.abs(m.p.y + 1.5) * 0.15;
   const front = M0.mols.reduce((a, b) => (score(b) > score(a) ? b : a));
-  const L3 = mkLabel(1, 'Water molecule · H₂O', '#E3ECEA'); L3.pos.copy(front.p).add(V(0, 0.6, 0));
+  const LMol = mkLabel(1, 'Water molecule · H₂O', '#E3ECEA'); LMol.pos.copy(front.p).add(V(0, 0.6, 0));
   M0.absLabel = mkLabel(1, '', '#F2B64E'); M0.absLabel.show = false;
   m0Tick(0, 0);
 })();
 
 M0.env = () => {
   setSky({ top: '#173039', hor: '#0b171c', bot: '#05090b', boxes: true });
-  setLights({ sky: '#dfe9ee', ground: '#10161a', hemi: 0.6, sunCol: '#ffffff', sun: 2.2, pos: V(-6, 14, 12), target: V(0, 0, 0), ext: 14 });
+  setLights({ sky: '#dfe9ee', ground: '#10161a', hemi: 0.6, sunCol: '#ffffff', sun: 2.2, pos: V(-6, 16, 12), target: V(0, 0, 0), ext: 14 });
   setWater(null);
   UW.uExposure.value = 1.1; UW.uVignette.value = 0.5;
 };
 
-function spawnPhoton(delay) {
-  if (M0.photons.length >= 80) return;
-  const p = PT[M0.st.colour] || VISIBLE[Math.floor(Math.random() * VISIBLE.length)];
-  M0.photons.push({ type: p.key, x: SLAB.x0 - 3, y: (Math.random() * 2 - 1) * (SLAB.h - 0.8), z: (Math.random() * 2 - 1) * (SLAB.d - 0.6),
-    absorbAt: -Math.log(1 - Math.random()) / (p.a * M_PER_UNIT), delay, ph: Math.random() * 6.28 });
+/* a photon leaves the sun and is absorbed at a depth drawn from its colour's absorption coefficient */
+function spawnPhoton(p, x, z, lag, ray) {
+  if (M0.photons.length >= MAXP) return;
+  M0.photons.push({ type: p.key, x, z, y: SUN_Y - 0.9 + lag, absorbAt: -Math.log(1 - Math.random()) / (p.a * M_PER_UNIT), ph: Math.random() * 6.28, ray });
 }
-function fireBurst() { for (let k = 0; k < 12; k++) spawnPhoton(k * 0.12); }
+// a ray of sunlight holds eight photons of each of the six colours, which add up to white; a single colour sends twelve
+function launchRay() {
+  const sel = PT[M0.st.colour], list = sel ? Array(12).fill(sel) : SUNLIGHT.flatMap(p => Array(8).fill(p));
+  const ray = { id: ++M0.rayN, start: new THREE.Color(0, 0, 0), halo: M0.halos.find(h => !M0.rays.some(r => r.halo === h)) || null };
+  list.forEach(p => { ray.start.add(p.glow); spawnPhoton(p, (Math.random() * 2 - 1) * 2.4, (Math.random() * 2 - 1) * 1.3, (Math.random() - 0.5) * 0.3, ray.id); });
+  ray.norm = 1 / Math.max(ray.start.r, ray.start.g, ray.start.b);
+  M0.rays.push(ray);
+}
 
 function absorb(ph) {
+  const p = PT[ph.type], y = COL.top - ph.absorbAt, depth = ph.absorbAt * M_PER_UNIT;
   let best = null, bd = 1e9;
-  for (const m of M0.mols) { const d = (m.p.x - ph.x) ** 2 + (m.p.y - ph.y) ** 2 + (m.p.z - ph.z) ** 2; if (d < bd) { bd = d; best = m; } }
+  for (const m of M0.mols) { const d = (m.p.x - ph.x) ** 2 + (m.p.y - y) ** 2 + (m.p.z - ph.z) ** 2; if (d < bd) { bd = d; best = m; } }
   ph.dead = true;
-  M0.tally[ph.type].abs++; M0.tallyDirty = true;
+  const t = M0.tally[ph.type]; t.abs++; t.depth += depth; M0.tallyDirty = true;
   best.exc = 1; best.t = 0;
   // the vibration spreads into the neighbours as heat
   for (const m of M0.mols) { const d = m.p.distanceTo(best.p); if (d < 2.6) m.warm = Math.max(m.warm, 1 - d / 2.6); }
   const f = M0.flashes.find(f => f.t >= 1) || M0.flashes[0];
-  f.t = 0; f.s.position.copy(best.p); f.s.material.color.copy(lin(PT[ph.type].col)); f.s.visible = true;
-  for (let k = 0; k < 14; k++) {
+  f.t = 0; f.s.position.copy(best.p); f.s.material.color.copy(lin(p.col)); f.s.visible = true;
+  for (let k = 0; k < 12; k++) {
     const dir = V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
     M0.heat.push({ p: best.p.clone(), v: dir.multiplyScalar(0.6 + Math.random() * 0.9), life: 1 });
   }
-  if (M0.heat.length > 400) M0.heat.splice(0, M0.heat.length - 400);
+  if (M0.heat.length > 500) M0.heat.splice(0, M0.heat.length - 500);
   if (M0.absLabelT <= 0) {
-    M0.absLabel.el.textContent = `${PT[ph.type].name} photon absorbed · bonds vibrate → heat`;
-    M0.absLabel.pos.copy(best.p).add(V(0, 0.9, 0)); M0.absLabel.show = true; M0.absLabelT = 2.4;
+    M0.absLabel.el.textContent = `${p.name} photon absorbed at ${fmtLen(depth)} · bonds vibrate → heat`;
+    M0.absLabel.pos.copy(best.p).add(V(0, 0.9, 0)); M0.absLabel.show = true; M0.absLabelT = 1.8;
   }
 }
 
 function m0Tick(dt, t) {
-  if (M0.st.stream) { M0.spawnAcc += dt * 3.5 * M0.st.speed; while (M0.spawnAcc >= 1) { M0.spawnAcc -= 1; spawnPhoton(0); } }
-  const speed = 6 * M0.st.speed;   // every colour travels at the same speed in water
-  for (const ph of M0.photons) {
-    if (ph.delay > 0) { ph.delay -= dt; continue; }
-    ph.x += speed * dt;
-    if (ph.x - SLAB.x0 >= ph.absorbAt && ph.x <= SLAB.x1) absorb(ph);
-    else if (ph.x > SLAB.x1 + 2.5) { ph.dead = true; M0.tally[ph.type].pass++; M0.tallyDirty = true; }
+  if (M0.st.stream) {
+    M0.spawnAcc += dt * 10 * M0.st.speed;
+    while (M0.spawnAcc >= 1) {
+      M0.spawnAcc -= 1;
+      const p = PT[M0.st.colour] || SUNLIGHT[Math.floor(Math.random() * SUNLIGHT.length)];
+      spawnPhoton(p, (Math.random() * 2 - 1) * 2.4, (Math.random() * 2 - 1) * 1.3, 0, 0);
+    }
   }
+  const speed = 4.5 * M0.st.speed;   // every colour travels at the same speed in water
+  for (const ph of M0.photons) {
+    ph.y -= speed * dt;
+    if (COL.top - ph.y >= ph.absorbAt && ph.y >= COL.bottom) absorb(ph);
+    else if (ph.y < COL.bottom - 1.5) { ph.dead = true; M0.tally[ph.type].pass++; M0.tallyDirty = true; }
+  }
+  // each ray's glow is the sum of its surviving photons: white at the surface, bluer as the red is taken out
+  M0.rays.forEach(r => {
+    const alive = M0.photons.filter(ph => ph.ray === r.id && !ph.dead);
+    if (!alive.length) { r.done = true; if (r.halo) r.halo.visible = false; return; }
+    if (!r.halo) return;
+    const sum = new THREE.Color(0, 0, 0);
+    let yy = 0;
+    alive.forEach(ph => { sum.add(PT[ph.type].glow); yy += ph.y; });
+    r.halo.position.set(0, yy / alive.length, 0); r.halo.scale.set(7.5, 3.2, 1);
+    r.halo.material.color.copy(sum.multiplyScalar(r.norm * 0.42)); r.halo.visible = true;
+  });
+  M0.rays = M0.rays.filter(r => !r.done);
   M0.photons = M0.photons.filter(p => !p.dead);
   // molecules: thermal wobble for all; a decaying O–H stretch on any that just absorbed a photon
   let recolour = false;
@@ -1539,13 +1613,12 @@ function m0Tick(dt, t) {
   const wp = M0.waveP.geometry.attributes, hp = M0.headP.geometry.attributes, cp = M0.coreP.geometry.attributes;
   let nw = 0, nh = 0;
   for (const ph of M0.photons) {
-    if (ph.delay > 0) continue;
-    const p = PT[ph.type], c = lin(p.col), lam = 1.5 * p.wl / 650;
+    const p = PT[ph.type], c = p.glow, lam = 1.5 * p.wl / 650;
     hp.position.setXYZ(nh, ph.x, ph.y, ph.z); hp.color.setXYZ(nh, c.r, c.g, c.b);
     cp.position.setXYZ(nh, ph.x, ph.y, ph.z); cp.color.setXYZ(nh, 0.45 + 0.55 * c.r, 0.45 + 0.55 * c.g, 0.45 + 0.55 * c.b); nh++;
     for (let k = 0; k < WAVE_N; k++) {
-      const dx = k * 0.1, env = Math.sin(Math.PI * (k + 0.5) / WAVE_N);
-      wp.position.setXYZ(nw, ph.x - dx, ph.y + 0.4 * env * Math.sin(2 * Math.PI * dx / lam + t * 9 + ph.ph), ph.z);
+      const dy = k * 0.1, env = Math.sin(Math.PI * (k + 0.5) / WAVE_N);
+      wp.position.setXYZ(nw, ph.x + 0.38 * env * Math.sin(2 * Math.PI * dy / lam + t * 9 + ph.ph), ph.y + dy, ph.z);
       wp.color.setXYZ(nw, c.r * env, c.g * env, c.b * env); nw++;
     }
   }
@@ -1567,16 +1640,19 @@ function m0Tick(dt, t) {
 
 function m0Update() {
   const p = PT[M0.st.colour];
+  const left = d => `<span class="sw" style="background:${hueHex(sunlightAt(d))}"></span>${Math.round(100 * photonsLeft(d))}%`;
   const rows = p ? [
     ['Wavelength', `${p.wl} nm${p.key === 'ir' ? ' (invisible)' : ''}`],
     ['Photon energy', `${photonEV(p.wl).toFixed(2)} eV`],
-    ['O\u2060–\u2060H rungs needed', `≈ ${rungsFor(photonEV(p.wl)).toFixed(1)}`],
+    ['O⁠–⁠H rungs needed', `≈ ${rungsFor(photonEV(p.wl)).toFixed(1)}`],
     ['Absorption by pure water', `${sig2(p.a)} m⁻¹`],
     ['Only 10% left after', fmtLen(Math.log(10) / p.a)],
     ['Molecules passed before one absorbs it (average)', fmtCount(1 / p.a / MOL_SPACING)]
   ] : [
-    ['Photons in the beam', 'six visible colours'],
-    ['Watch for', 'which colours reach the far side']
+    ['A ray of sunlight', '8 photons of each colour'],
+    ['Photons left at 10 m', left(10)],
+    ['Photons left at 30 m', left(30)],
+    ['Photons left at 60 m', left(60)]
   ];
   M0.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
   m0Ladder(); m0Reach(); m0Tally();
@@ -1584,9 +1660,10 @@ function m0Update() {
 function m0Tally() {
   const rows = PHOTON_TYPES.filter(p => M0.tally[p.key].abs + M0.tally[p.key].pass > 0).map(p => {
     const t = M0.tally[p.key], n = t.abs + t.pass, pc = Math.round(100 * t.abs / n);
-    return `<dt><span class="sw" style="background:${p.col}"></span>${p.name}</dt><dd>${t.abs} of ${n} absorbed<span class="pill ${pc > 60 ? 'bad' : pc >= 25 ? 'warn' : 'good'}">${pc}%</span></dd>`;
+    const where = t.abs ? ` · mean depth ${fmtLen(t.depth / t.abs)}` : '';
+    return `<dt><span class="sw" style="background:${p.col}"></span>${p.name}</dt><dd>${t.abs} of ${n} absorbed${where}<span class="pill ${pc > 60 ? 'bad' : pc >= 25 ? 'warn' : 'good'}">${pc}%</span></dd>`;
   });
-  M0.tallyEl.innerHTML = rows.length ? rows.join('') : '<dt>Fire some photons to start counting.</dt><dd></dd>';
+  M0.tallyEl.innerHTML = rows.length ? rows.join('') : '<dt>Launch a ray to start counting. Photons that pass 60 m count as not absorbed.</dt><dd></dd>';
 }
 /* the energy ladder: rungs at the real overtone bands, each colour's photon energy as an arrow */
 function m0Ladder() {
@@ -1632,9 +1709,13 @@ function m0Reach() {
     ctx.fillStyle = 'rgba(227,236,234,.12)'; ctx.fillRect(Math.round(X(d)), 8, 1, h - 30);
     ctx.fillStyle = '#8BA2A6'; ctx.textAlign = 'center'; ctx.fillText(d ? `${d} m` : '0', X(d), h - 9);
   });
-  ctx.textAlign = 'left';
+  // the depth of the column in the 3D view
+  const xc = Math.round(X(COL.depthM)) + 0.5;
+  ctx.strokeStyle = 'rgba(242,182,78,.75)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(xc, 4); ctx.lineTo(xc, h - 22); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#F2B64E'; ctx.textAlign = 'left'; ctx.font = '600 10px "Barlow Condensed", sans-serif'; ctx.fillText('COLUMN · 60 M', xc + 4, h - 24);
   PHOTON_TYPES.forEach((p, i) => {
-    const y = 10 + i * 23, d = Math.log(10) / p.a;
+    const y = 6 + i * 22, d = Math.log(10) / p.a;
     ctx.globalAlpha = !sel || sel === p ? 1 : 0.3;
     ctx.fillStyle = '#E3ECEA'; ctx.font = '600 12px "Barlow Condensed", sans-serif'; ctx.fillText(p.name.toUpperCase(), 6, y + 11);
     ctx.fillStyle = p.col; ctx.fillRect(x0, y + 1, Math.max(2, X(d) - x0), 13);
@@ -1644,35 +1725,36 @@ function m0Reach() {
 }
 
 (function panelM0() {
-  const m = modShell(1, 'Why water absorbs red light', 'Light travels as photons, and each photon carries a packet of energy set by its colour. A water molecule can only take in energy in fixed steps, by making its O\u2060–\u2060H bonds vibrate harder. Fire photons into the water and watch which colours get through.');
+  const m = modShell(1, 'Why water absorbs red light', 'Sunlight is a mix of photons of every colour. Send a ray down through the water and watch the molecules catch the red photons first: the light left behind turns blue. No photon changes colour; the beam changes because the mix changes.');
   const g = groupBox(m, 'Controls');
-  segmented(g, { id: 'm0-col', label: 'Photons', value: 'white', options: [['white', '<span class="sw rainbow"></span>White light'], ...PHOTON_TYPES.map(p => [p.key, `<span class="sw" style="background:${p.col}"></span>${p.name}`])] },
+  segmented(g, { id: 'm0-col', label: 'Light from the sun', value: 'sun', options: [['sun', '<span class="sw rainbow"></span>Sunlight'], ...SUNLIGHT.map(p => [p.key, `<span class="sw" style="background:${p.col}"></span>${p.name}`]), ['ir', `<span class="sw" style="background:${PT.ir.col}"></span>Infrared`]] },
     v => { M0.st.colour = v; M0.absLabel.show = false; M0.absLabelT = 0; m0Update(); });
   const row = el('div', { class: 'btnrow' });
-  const fire = el('button', { type: 'button', class: 'btn primary', id: 'm0-fire' }, 'Fire 12 photons');
+  const fire = el('button', { type: 'button', class: 'btn primary', id: 'm0-fire' }, 'Launch a ray');
   const reset = el('button', { type: 'button', class: 'btn', id: 'm0-reset' }, 'Reset counts');
-  fire.addEventListener('click', fireBurst);
-  reset.addEventListener('click', () => { PHOTON_TYPES.forEach(p => { M0.tally[p.key] = { abs: 0, pass: 0 }; }); m0Tally(); });
+  fire.addEventListener('click', launchRay);
+  reset.addEventListener('click', () => { PHOTON_TYPES.forEach(p => { M0.tally[p.key] = { abs: 0, pass: 0, depth: 0 }; }); m0Tally(); });
   row.append(fire, reset); g.appendChild(row);
-  toggle(g, { id: 'm0-stream', label: 'Continuous stream of photons', value: false }, v => { M0.st.stream = v; });
+  toggle(g, { id: 'm0-stream', label: 'Keep the sun shining (a steady beam)', value: false }, v => { M0.st.stream = v; });
   slider(g, { id: 'm0-speed', label: 'Animation speed', min: 0.25, max: 2, step: 0.05, value: 1, fmt: v => v.toFixed(2) + '×' }, v => { M0.st.speed = v; });
   const r = el('dl', { class: 'readouts' }); m.appendChild(r); M0.readEl = r;
   const tl = groupBox(m, 'Photons so far');
   const td = el('dl', { class: 'readouts' }); tl.appendChild(td); M0.tallyEl = td;
-  M0.ladder = insetBox(m, 'The O\u2060–\u2060H energy ladder', 360, 236, 'Each rung is one more step of O\u2060–\u2060H stretching. To absorb a photon, a molecule must climb several rungs in one jump. The bars show how strongly pure water absorbs at each rung’s band (log scale, approximate): every extra rung is at least four times weaker.');
-  M0.reach = insetBox(m, 'How far each colour gets in pure water', 360, 196, 'Distance after which pure water has absorbed 90% of each colour (Pope and Fry 1997; infrared approximate). In the sea, plankton, sediment and dissolved matter shorten these distances, especially for blue: see the Light in water tab.');
+  M0.ladder = insetBox(m, 'The O⁠–⁠H energy ladder', 360, 236, 'Each rung is one more step of O⁠–⁠H stretching. To absorb a photon, a molecule must climb several rungs in one jump. The bars show how strongly pure water absorbs at each rung’s band (log scale, approximate): every extra rung is at least four times weaker.');
+  M0.reach = insetBox(m, 'How far each colour gets in pure water', 360, 196, 'Distance after which pure water has absorbed 90% of each colour (Pope and Fry 1997; infrared approximate). The dashed line is the depth of the column. In the sea, plankton, sediment and dissolved matter shorten these distances, especially for blue: see the Light in water tab.');
   const how = groupBox(m, 'How it works');
   how.appendChild(el('ol', { class: 'ws-list how' }, `
-    <li>A photon’s energy is set by its colour: red carries about 1.9 eV, blue about 2.8 eV and violet 3.1 eV.</li>
-    <li>Water can take in that energy only by making an O\u2060–\u2060H bond vibrate harder. Vibration energy comes in steps, like the rungs of a ladder, about 0.4 eV apart.</li>
-    <li>To absorb a photon, a molecule must climb several rungs in one jump. The more rungs, the less likely the jump.</li>
-    <li>Red needs about 4 to 5 rungs, so water absorbs it within a few metres. Blue needs about 7, so in pure water it travels hundreds of metres. Infrared needs only about 3, so it is gone within centimetres.</li>
-    <li>So red is not absorbed because it is weak: violet carries the most energy, yet pure water absorbs it least. What matters is how many rungs the photon’s energy reaches.</li>
+    <li>Sunlight is a mix of photons of every colour. A photon’s energy is set by its colour: red carries about 1.9 eV, blue about 2.8 eV and violet 3.1 eV.</li>
+    <li>Water can take in that energy only by making an O⁠–⁠H bond vibrate harder. Vibration energy comes in steps, like the rungs of a ladder, about 0.4 eV apart.</li>
+    <li>To absorb a photon, a molecule must climb several rungs in one jump. The more rungs, the less likely the jump. Red needs about 4 to 5 rungs, blue about 7.</li>
+    <li>So red photons are caught in the first few metres, while blue ones travel hundreds of metres in pure water. Most of the absorbing happens near the surface; deeper down, fewer photons are absorbed, and they are greener and bluer.</li>
+    <li>The beam turns blue with depth, but no photon changes colour: each one keeps its colour until it is absorbed. The light left is bluer because the red photons have been taken out.</li>
+    <li>Red is not absorbed because it is weak: violet carries the most energy, yet pure water absorbs it least. Sunlight also carries infrared, which needs only about 3 rungs and is gone within centimetres.</li>
     <li>The absorbed energy makes the molecule vibrate, and within about a trillionth of a second that vibration spreads to its neighbours as heat.</li>`));
   M0.viewsFn = () => {
-    const aspect = Math.max(0.4, stage.clientWidth / Math.max(1, stage.clientHeight));
-    const r = clamp(11.5 / (Math.tan(rad(19)) * aspect), 22, 44);
-    return { side: { t: V(0, 0, 0), r, az: 0, el: 0.02 }, d3: { t: V(0, -0.3, 0), r: r * 1.04, az: -0.42, el: 0.2 } };
+    const aspect = Math.max(0.4, stage.clientWidth / Math.max(1, stage.clientHeight)), tn = Math.tan(rad(19));
+    const r = clamp(Math.max(12.6 / tn, 9 / (tn * aspect)), 28, 64);
+    return { side: { t: V(0, 1.6, 0), r, az: 0, el: 0.02 }, d3: { t: V(0, 1.4, 0), r: r * 1.03, az: -0.5, el: 0.12 } };
   };
 })();
 

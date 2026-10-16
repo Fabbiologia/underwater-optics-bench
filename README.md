@@ -7,7 +7,7 @@ An interactive 3D lab for teaching underwater imaging, made for the OS207 *Light
 ## What's in it
 
 1. **Hearing the spectrum** – every colour of light played as a note, 40 octaves lower, so pitch rises with the energy of each photon. Sweep from red to violet, compare red and blue, and extend into ultraviolet and infrared.
-2. **Photons and water** – a micro view of water molecules. Fire photons of different colours into the water and see why red is absorbed within a few metres while blue travels much further: each photon's energy is compared with the steps of O–H vibration a water molecule can absorb.
+2. **Photons and water** – a sunlit column of water at molecular scale. Launch a ray of sunlight and watch the molecules absorb the red photons in the first few metres while blue travels on, so the light left turns blue with depth. Each photon's energy is compared with the steps of O–H vibration a water molecule can absorb.
 3. **Focus in air** – a thin lens on an optical bench. Move the focus, aperture and focal length and watch each subject's cone of light converge in front of, on or behind the sensor, with a simulated photo showing the blur.
 4. **Behind the port** – a camera housing on a seagrass bed. Compare flat and dome ports: apparent distance and size, angle of view, colour fringing and the dome's virtual image.
 5. **Light in water** – a cut-away water column. Surface reflection and refraction, Snell's window, colour loss with depth, a turbidity slider from clear ocean to turbid estuary, strobes, backscatter and white balance.
