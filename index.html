@@ -1265,7 +1265,7 @@ const MS = (() => {
     for (const [name, wl] of (st.ext ? PRESETS.concat(PRESETS_EXT) : PRESETS)) {
       const b = el('button', { type: 'button', class: 'chip', 'aria-label': `${name}, ${wl} nanometres` }, `<i></i>${name} ${wl}`);
       b.style.setProperty('--c', isVisible(wl) ? css(rgbOf(wl)) : (wl < 380 ? '#6b4fb3' : '#8a2b2b'));
-      b.addEventListener('click', () => { setWl(wl, { blip: true }); setStatus(`${name} light: ${energyEV(wl).toFixed(2)} eV per photon, ${(700 / wl).toFixed(2)} times red.`); });
+      b.addEventListener('click', () => { setWl(wl, { blip: true }); setStatus(`${name} light: ${energyEV(wl).toFixed(2)} eV per photon, ${(700 / wl).toFixed(2)} times red at 700 nm.`); });
       chips.appendChild(b);
     }
   }
