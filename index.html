@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Underwater Optics Bench</title>
-<meta name="description" content="Interactive 3D lab: how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
+<meta name="description" content="Interactive 3D lab: why water absorbs red light first, how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
 <meta property="og:title" content="Underwater Optics Bench">
-<meta property="og:description" content="Interactive 3D lab: how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
+<meta property="og:description" content="Interactive 3D lab: why water absorbs red light first, how a camera lens focuses, what flat and dome ports do underwater, and how water filters light and colour with depth. With worksheets.">
 <meta property="og:type" content="website">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,6 +128,17 @@
   .ticks { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-top: 1px; font: 500 11.5px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .credit { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
   .credit a { color: var(--muted); }
+  .sw.rainbow { background: conic-gradient(#FF4B3E, #FFE23D, #45E06A, #3F7CFF, #A061FF, #FF4B3E); }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .btn {
+    font: 600 14px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { color: var(--ink); background: var(--amber); border-color: var(--amber); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .how { gap: 10px; }
+  .how li { max-width: 62ch; }
   :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
   @media (max-width: 900px) {
@@ -146,9 +157,10 @@
   <header>
     <div class="brand">Underwater Optics Bench<small>OS207 · Light &amp; imaging lab</small></div>
     <nav class="tabs" role="tablist" aria-label="Experiments">
-      <button class="tab" role="tab" id="tab-0" aria-selected="true" data-mod="0"><span class="n">1</span>Focus in air</button>
-      <button class="tab" role="tab" id="tab-1" aria-selected="false" data-mod="1"><span class="n">2</span>Behind the port</button>
-      <button class="tab" role="tab" id="tab-2" aria-selected="false" data-mod="2"><span class="n">3</span>Light in water</button>
+      <button class="tab" role="tab" id="tab-0" aria-selected="true" data-mod="0"><span class="n">1</span>Photons and water</button>
+      <button class="tab" role="tab" id="tab-1" aria-selected="false" data-mod="1"><span class="n">2</span>Focus in air</button>
+      <button class="tab" role="tab" id="tab-2" aria-selected="false" data-mod="2"><span class="n">3</span>Behind the port</button>
+      <button class="tab" role="tab" id="tab-3" aria-selected="false" data-mod="3"><span class="n">4</span>Light in water</button>
     </nav>
   </header>
   <main>
@@ -638,7 +650,7 @@ function makeCameraBody(extra = {}) {
   front.rotation.y = -Math.PI / 2; front.position.x = 0.07; g.add(front);
   return shadowy(g);
 }
-/* compact underwater rig for tab 3: housing, dome port with shade, tray, handles, ball mounts; faces -x */
+/* compact underwater rig for tab 4: housing, dome port with shade, tray, handles, ball mounts; faces -x */
 function makeUWRig() {
   const g = new THREE.Group();
   const W = m => uwify(m, false);
@@ -912,6 +924,315 @@ const fmt = (v, d = 1) => Number(v).toFixed(d);
 const fmtDist = m => m >= 1 ? fmt(m, 2) + ' m' : Math.round(m * 100) + ' cm';
 
 /* =====================================================================
+   MODULE 0 — PHOTONS AND WATER (why water absorbs red light)
+   Schematic micro view: molecules about 1.3 units apart stand in for 0.3 nm, while along the
+   beam 1 unit = 0.27 m, so the block is about 5 m of water. Absorption uses pure-water
+   coefficients (Pope and Fry 1997; infrared approximate).
+   ===================================================================== */
+const MOL_SPACING = 0.31e-9;   // average distance between neighbouring water molecules, m
+const M_PER_UNIT = 0.272;      // metres of water per scene unit along the beam
+const PHOTON_TYPES = [
+  { key: 'ir', name: 'Infrared', wl: 1000, a: 40, col: '#B5473E' },
+  { key: 'red', name: 'Red', wl: 650, a: 0.34, col: '#FF4B3E' },
+  { key: 'orange', name: 'Orange', wl: 600, a: 0.222, col: '#FF9933' },
+  { key: 'yellow', name: 'Yellow', wl: 580, a: 0.0896, col: '#FFE23D' },
+  { key: 'green', name: 'Green', wl: 530, a: 0.042, col: '#45E06A' },
+  { key: 'blue', name: 'Blue', wl: 450, a: 0.0092, col: '#3F7CFF' },
+  { key: 'violet', name: 'Violet', wl: 400, a: 0.0066, col: '#A061FF' }
+];
+const PT = Object.fromEntries(PHOTON_TYPES.map(p => [p.key, p]));
+const VISIBLE = PHOTON_TYPES.filter(p => p.key !== 'ir');
+/* O–H stretch overtones of liquid water: rung n holds n quanta of O–H stretching. Band centre (nm) and
+   approximate peak absorption (m⁻¹), after Hale and Querry (1973), Kou et al. (1993), Pope and Fry (1997). */
+const RUNGS = [
+  { nm: 2950, a: 1.1e6, lab: '10⁶' }, { nm: 1450, a: 3000, lab: '3000' }, { nm: 975, a: 45, lab: '45' },
+  { nm: 740, a: 2.7, lab: '2.7' }, { nm: 605, a: 0.25, lab: '0.25' }, { nm: 515, a: 0.04, lab: '0.04' }, { nm: 450, a: 0.009, lab: '0.009' }
+];
+const photonEV = nm => 1239.84 / nm;
+const RUNG_E = [0, ...RUNGS.map(r => photonEV(r.nm))];
+function rungsFor(e) {
+  for (let n = 1; n < RUNG_E.length; n++) if (e <= RUNG_E[n]) return n - 1 + (e - RUNG_E[n - 1]) / (RUNG_E[n] - RUNG_E[n - 1]);
+  const k = RUNG_E.length - 1;
+  return k + (e - RUNG_E[k]) / (RUNG_E[k] - RUNG_E[k - 1]);
+}
+const sig2 = x => Number(x.toPrecision(2));
+const fmtLen = m => m < 1 ? `${sig2(m * 100)} cm` : `${sig2(m)} m`;
+const fmtCount = n => n >= 1e9 ? `about ${sig2(n / 1e9)} billion` : `about ${sig2(n / 1e6)} million`;
+const SLAB = { x0: -9, x1: 9, h: 4.2, d: 2.6 };
+const M0 = {
+  group: new THREE.Group(), ov: new THREE.Group(),
+  st: { colour: 'white', speed: 1, stream: false },
+  scale: 'Not to scale · the block stands for about 5 m of pure water; real molecules are only 0.3 nm apart, so a red photon passes billions of them before one absorbs it',
+  mols: [], photons: [], heat: [], flashes: [], tally: {}, spawnAcc: 0, tallyDirty: true, absLabelT: 0
+};
+PHOTON_TYPES.forEach(p => { M0.tally[p.key] = { abs: 0, pass: 0 }; });
+const GLOW = canvasTex(64, 64, (ctx) => {
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,.6)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+}, false);
+
+const _o = new THREE.Object3D(), _q = new THREE.Quaternion(), _qw = new THREE.Quaternion(), _c = new THREE.Color();
+const HALF_HOH = rad(104.5 / 2), OH_LEN = 0.62, WAVE_N = 34;
+(function buildM0() {
+  world.add(M0.group); overlay.add(M0.ov);
+  // the water: a faint tinted block with edges, so it is clear where light enters and leaves
+  const slabGeo = new THREE.BoxGeometry(SLAB.x1 - SLAB.x0, SLAB.h * 2, SLAB.d * 2);
+  M0.ov.add(new THREE.Mesh(slabGeo, new THREE.MeshBasicMaterial({ color: lin('#1F7A8C'), transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide })));
+  M0.ov.add(new THREE.LineSegments(new THREE.EdgesGeometry(slabGeo), new THREE.LineBasicMaterial({ color: lin('#43A9C6'), transparent: true, opacity: 0.4 })));
+  // molecules at random positions, never closer than 1.55 units (real water is denser; this keeps the photons visible)
+  srand(77);
+  const pts = [];
+  for (let tries = 0; pts.length < 140 && tries < 30000; tries++) {
+    const p = V(SLAB.x0 + 0.6 + rnd() * (SLAB.x1 - SLAB.x0 - 1.2), -SLAB.h + 0.6 + rnd() * (2 * SLAB.h - 1.2), -SLAB.d + 0.5 + rnd() * (2 * SLAB.d - 1.0));
+    if (pts.every(q => q.distanceToSquared(p) > 1.55 * 1.55)) pts.push(p);
+  }
+  const N = pts.length;
+  M0.oMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.34, 22, 16), stdMat('#ffffff', 0.32, 0.05), N);
+  M0.hMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.21, 16, 12), stdMat('#F2F5F6', 0.38, 0), N * 2);
+  M0.bMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.075, 0.075, 1, 10), stdMat('#BFCACE', 0.45, 0.2), N * 2);
+  [M0.oMesh, M0.hMesh, M0.bMesh].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); M0.group.add(m); });
+  M0.oBase = lin('#D63A2C'); M0.oHot = lin('#FFD08A');
+  pts.forEach((p, i) => {
+    M0.mols.push({ p, q: new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd() * 6.28, rnd() * 6.28, rnd() * 6.28)),
+      axis: V(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize(), ph: rnd() * 6.28, exc: 0, t: 0, warm: 0 });
+    M0.oMesh.setColorAt(i, M0.oBase);
+  });
+  M0.oMesh.instanceColor.needsUpdate = true;
+  // photons as glowing heads and wave packets, plus heat specks and absorption flashes
+  const glowPts = (n, size, onTop) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    g.setDrawRange(0, 0);
+    const o = new THREE.Points(g, new THREE.PointsMaterial({ size, map: GLOW, vertexColors: true, transparent: true, depthWrite: false, depthTest: !onTop, blending: THREE.AdditiveBlending }));
+    o.frustumCulled = false; M0.ov.add(o); return o;
+  };
+  // photon glows draw over the molecules so they never get lost in the crowd
+  M0.waveP = glowPts(80 * WAVE_N, 0.46, true); M0.headP = glowPts(80, 1.7, true); M0.coreP = glowPts(80, 0.62, true); M0.heatP = glowPts(400, 0.3);
+  for (let k = 0; k < 12; k++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
+    s.visible = false; M0.ov.add(s); M0.flashes.push({ s, t: 1 });
+  }
+  const L1 = mkLabel(0, 'Light enters the water', '#E3ECEA'); L1.pos.set(SLAB.x0 + 1.8, SLAB.h + 0.7, 0);
+  const L2 = mkLabel(0, 'Deeper water →', '#8BA2A6'); L2.pos.set(SLAB.x1 - 1.6, SLAB.h + 0.7, 0);
+  const score = m => m.p.z - Math.abs(m.p.x) * 0.15 - Math.abs(m.p.y + 2) * 0.2;
+  const front = M0.mols.reduce((a, b) => (score(b) > score(a) ? b : a));
+  const L3 = mkLabel(0, 'Water molecule · H₂O', '#E3ECEA'); L3.pos.copy(front.p).add(V(0, 0.6, 0));
+  M0.absLabel = mkLabel(0, '', '#F2B64E'); M0.absLabel.show = false;
+  m0Tick(0, 0);
+})();
+
+M0.env = () => {
+  setSky({ top: '#173039', hor: '#0b171c', bot: '#05090b', boxes: true });
+  setLights({ sky: '#dfe9ee', ground: '#10161a', hemi: 0.6, sunCol: '#ffffff', sun: 2.2, pos: V(-6, 14, 12), target: V(0, 0, 0), ext: 14 });
+  setWater(null);
+  UW.uExposure.value = 1.1; UW.uVignette.value = 0.5;
+};
+
+function spawnPhoton(delay) {
+  if (M0.photons.length >= 80) return;
+  const p = PT[M0.st.colour] || VISIBLE[Math.floor(Math.random() * VISIBLE.length)];
+  M0.photons.push({ type: p.key, x: SLAB.x0 - 3, y: (Math.random() * 2 - 1) * (SLAB.h - 0.8), z: (Math.random() * 2 - 1) * (SLAB.d - 0.6),
+    absorbAt: -Math.log(1 - Math.random()) / (p.a * M_PER_UNIT), delay, ph: Math.random() * 6.28 });
+}
+function fireBurst() { for (let k = 0; k < 12; k++) spawnPhoton(k * 0.12); }
+
+function absorb(ph) {
+  let best = null, bd = 1e9;
+  for (const m of M0.mols) { const d = (m.p.x - ph.x) ** 2 + (m.p.y - ph.y) ** 2 + (m.p.z - ph.z) ** 2; if (d < bd) { bd = d; best = m; } }
+  ph.dead = true;
+  M0.tally[ph.type].abs++; M0.tallyDirty = true;
+  best.exc = 1; best.t = 0;
+  // the vibration spreads into the neighbours as heat
+  for (const m of M0.mols) { const d = m.p.distanceTo(best.p); if (d < 2.6) m.warm = Math.max(m.warm, 1 - d / 2.6); }
+  const f = M0.flashes.find(f => f.t >= 1) || M0.flashes[0];
+  f.t = 0; f.s.position.copy(best.p); f.s.material.color.copy(lin(PT[ph.type].col)); f.s.visible = true;
+  for (let k = 0; k < 14; k++) {
+    const dir = V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    M0.heat.push({ p: best.p.clone(), v: dir.multiplyScalar(0.6 + Math.random() * 0.9), life: 1 });
+  }
+  if (M0.heat.length > 400) M0.heat.splice(0, M0.heat.length - 400);
+  if (M0.absLabelT <= 0) {
+    M0.absLabel.el.textContent = `${PT[ph.type].name} photon absorbed · bonds vibrate → heat`;
+    M0.absLabel.pos.copy(best.p).add(V(0, 0.9, 0)); M0.absLabel.show = true; M0.absLabelT = 2.4;
+  }
+}
+
+function m0Tick(dt, t) {
+  if (M0.st.stream) { M0.spawnAcc += dt * 3.5 * M0.st.speed; while (M0.spawnAcc >= 1) { M0.spawnAcc -= 1; spawnPhoton(0); } }
+  const speed = 6 * M0.st.speed;   // every colour travels at the same speed in water
+  for (const ph of M0.photons) {
+    if (ph.delay > 0) { ph.delay -= dt; continue; }
+    ph.x += speed * dt;
+    if (ph.x - SLAB.x0 >= ph.absorbAt && ph.x <= SLAB.x1) absorb(ph);
+    else if (ph.x > SLAB.x1 + 2.5) { ph.dead = true; M0.tally[ph.type].pass++; M0.tallyDirty = true; }
+  }
+  M0.photons = M0.photons.filter(p => !p.dead);
+  // molecules: thermal wobble for all; a decaying O–H stretch on any that just absorbed a photon
+  let recolour = false;
+  M0.mols.forEach((m, i) => {
+    if (m.exc > 0) { m.t += dt; m.exc = Math.exp(-m.t / 1.6); if (m.exc < 0.02) m.exc = 0; }
+    if (m.warm > 0) m.warm = Math.max(0, m.warm - dt / 2.5);
+    const wob = 1 + 2.5 * m.warm;
+    _q.copy(m.q).multiply(_qw.setFromAxisAngle(m.axis, 0.14 * wob * Math.sin(t * 1.3 + m.ph)));
+    const A = m.exc * 0.24;
+    const o = V(m.p.x + 0.05 * wob * Math.sin(t * 2.3 + m.ph * 3), m.p.y + 0.05 * wob * Math.sin(t * 1.9 + m.ph), m.p.z);
+    _o.position.copy(o); _o.quaternion.identity(); _o.scale.setScalar(1); _o.updateMatrix(); M0.oMesh.setMatrixAt(i, _o.matrix);
+    const heat = Math.max(m.exc, 0.45 * m.warm);
+    if (heat > 0 || m.wasHot) { M0.oMesh.setColorAt(i, _c.copy(M0.oBase).lerp(M0.oHot, heat)); m.wasHot = heat > 0; recolour = true; }
+    [1, -1].forEach((sgn, k) => {
+      const len = OH_LEN + A * Math.sin(t * 24 + k * Math.PI) + 0.02 * Math.sin(t * 9 + m.ph + k);
+      const dir = V(sgn * Math.sin(HALF_HOH), Math.cos(HALF_HOH), 0).applyQuaternion(_q);
+      _o.position.copy(o).addScaledVector(dir, len); _o.quaternion.identity(); _o.updateMatrix(); M0.hMesh.setMatrixAt(i * 2 + k, _o.matrix);
+      _o.position.copy(o).addScaledVector(dir, len / 2); _o.quaternion.setFromUnitVectors(YAXIS, dir); _o.scale.set(1, len, 1); _o.updateMatrix();
+      M0.bMesh.setMatrixAt(i * 2 + k, _o.matrix); _o.scale.setScalar(1);
+    });
+  });
+  if (recolour) M0.oMesh.instanceColor.needsUpdate = true;
+  [M0.oMesh, M0.hMesh, M0.bMesh].forEach(m => { m.instanceMatrix.needsUpdate = true; });
+  // each photon is a glowing head trailing a wave packet whose wavelength scales with its colour's
+  const wp = M0.waveP.geometry.attributes, hp = M0.headP.geometry.attributes, cp = M0.coreP.geometry.attributes;
+  let nw = 0, nh = 0;
+  for (const ph of M0.photons) {
+    if (ph.delay > 0) continue;
+    const p = PT[ph.type], c = lin(p.col), lam = 1.5 * p.wl / 650;
+    hp.position.setXYZ(nh, ph.x, ph.y, ph.z); hp.color.setXYZ(nh, c.r, c.g, c.b);
+    cp.position.setXYZ(nh, ph.x, ph.y, ph.z); cp.color.setXYZ(nh, 0.45 + 0.55 * c.r, 0.45 + 0.55 * c.g, 0.45 + 0.55 * c.b); nh++;
+    for (let k = 0; k < WAVE_N; k++) {
+      const dx = k * 0.1, env = Math.sin(Math.PI * (k + 0.5) / WAVE_N);
+      wp.position.setXYZ(nw, ph.x - dx, ph.y + 0.4 * env * Math.sin(2 * Math.PI * dx / lam + t * 9 + ph.ph), ph.z);
+      wp.color.setXYZ(nw, c.r * env, c.g * env, c.b * env); nw++;
+    }
+  }
+  M0.waveP.geometry.setDrawRange(0, nw); M0.headP.geometry.setDrawRange(0, nh); M0.coreP.geometry.setDrawRange(0, nh);
+  [wp, hp, cp].forEach(a => { a.position.needsUpdate = a.color.needsUpdate = true; });
+  // heat specks drift away from the molecule and fade
+  const tp = M0.heatP.geometry.attributes, hot = lin('#FF8A3D');
+  M0.heat.forEach(h => { h.p.addScaledVector(h.v, dt); h.life -= dt / 1.4; });
+  M0.heat = M0.heat.filter(h => h.life > 0);
+  M0.heat.forEach((h, i) => { tp.position.setXYZ(i, h.p.x, h.p.y, h.p.z); tp.color.setXYZ(i, hot.r * h.life, hot.g * h.life, hot.b * h.life); });
+  M0.heatP.geometry.setDrawRange(0, M0.heat.length); tp.position.needsUpdate = tp.color.needsUpdate = true;
+  M0.flashes.forEach(f => {
+    if (f.t >= 1) { f.s.visible = false; return; }
+    f.t = Math.min(1, f.t + dt / 0.6); f.s.scale.setScalar(0.6 + 2.4 * f.t); f.s.material.opacity = 1 - f.t;
+  });
+  if (M0.absLabelT > 0) { M0.absLabelT -= dt; if (M0.absLabelT <= 0) M0.absLabel.show = false; }
+  if (M0.tallyDirty && M0.tallyEl) { M0.tallyDirty = false; m0Tally(); }
+}
+
+function m0Update() {
+  const p = PT[M0.st.colour];
+  const rows = p ? [
+    ['Wavelength', `${p.wl} nm${p.key === 'ir' ? ' (invisible)' : ''}`],
+    ['Photon energy', `${photonEV(p.wl).toFixed(2)} eV`],
+    ['O\u2060–\u2060H rungs needed', `≈ ${rungsFor(photonEV(p.wl)).toFixed(1)}`],
+    ['Absorption by pure water', `${sig2(p.a)} m⁻¹`],
+    ['Only 10% left after', fmtLen(Math.log(10) / p.a)],
+    ['Molecules passed before one absorbs it (average)', fmtCount(1 / p.a / MOL_SPACING)]
+  ] : [
+    ['Photons in the beam', 'six visible colours'],
+    ['Watch for', 'which colours reach the far side']
+  ];
+  M0.readEl.innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  m0Ladder(); m0Reach(); m0Tally();
+}
+function m0Tally() {
+  const rows = PHOTON_TYPES.filter(p => M0.tally[p.key].abs + M0.tally[p.key].pass > 0).map(p => {
+    const t = M0.tally[p.key], n = t.abs + t.pass, pc = Math.round(100 * t.abs / n);
+    return `<dt><span class="sw" style="background:${p.col}"></span>${p.name}</dt><dd>${t.abs} of ${n} absorbed<span class="pill ${pc > 60 ? 'bad' : pc >= 25 ? 'warn' : 'good'}">${pc}%</span></dd>`;
+  });
+  M0.tallyEl.innerHTML = rows.length ? rows.join('') : '<dt>Fire some photons to start counting.</dt><dd></dd>';
+}
+/* the energy ladder: rungs at the real overtone bands, each colour's photon energy as an arrow */
+function m0Ladder() {
+  const { ctx, w, h } = M0.ladder, sel = PT[M0.st.colour];
+  ctx.globalAlpha = 1; ctx.fillStyle = '#0b171c'; ctx.fillRect(0, 0, w, h);
+  const y0 = h - 30, top = 22, Y = e => y0 - (y0 - top) * e / 3.2;
+  const xL = 26, xR = 190, xBand = 198, xBar = 246, barMax = 70;
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.font = '600 10.5px "Barlow Condensed", sans-serif'; ctx.fillStyle = '#8BA2A6';
+  ctx.fillText('RUNG', 4, 12); ctx.fillText('BAND', xBand, 12); ctx.fillText('ABSORPTION (m⁻¹)', xBar, 12);
+  ctx.font = '600 10px "JetBrains Mono", monospace';
+  RUNG_E.forEach((e, n) => {
+    const y = Math.round(Y(e)) + 0.5;
+    ctx.strokeStyle = n ? 'rgba(227,236,234,.3)' : 'rgba(227,236,234,.65)'; ctx.lineWidth = n ? 1 : 2;
+    ctx.beginPath(); ctx.moveTo(xL, y); ctx.lineTo(xR, y); ctx.stroke();
+    ctx.fillStyle = '#8BA2A6'; ctx.textAlign = 'right'; ctx.fillText(String(n), xL - 7, y + 3.5); ctx.textAlign = 'left';
+    if (!n) return;
+    const r = RUNGS[n - 1], len = Math.max(2, barMax * (Math.log10(r.a) + 2.5) / 9);
+    ctx.fillText(`${r.nm} nm`, xBand, y + 3.5);
+    ctx.fillStyle = 'rgba(67,169,198,.8)'; ctx.fillRect(xBar, y - 4, len, 8);
+    ctx.fillStyle = '#E3ECEA'; ctx.fillText(r.lab, xBar + len + 4, y + 3.5);
+  });
+  PHOTON_TYPES.forEach((p, i) => {
+    const x = 46 + i * 22, e = photonEV(p.wl), y = Y(e), on = !sel || sel === p, lw = sel === p ? 4 : 2.5;
+    ctx.globalAlpha = on ? 1 : 0.22;
+    ctx.strokeStyle = ctx.fillStyle = p.col; ctx.lineWidth = lw;
+    if (sel === p) { ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(xR, y); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = lw; }
+    ctx.beginPath(); ctx.moveTo(x, y0 - 1); ctx.lineTo(x, y + 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - lw - 2, y + 8); ctx.lineTo(x + lw + 2, y + 8); ctx.closePath(); ctx.fill();
+    if (on) { ctx.font = '600 9.5px "JetBrains Mono", monospace'; ctx.textAlign = 'center'; ctx.fillText(e.toFixed(1), x, y - 4); ctx.textAlign = 'left'; }
+    ctx.globalAlpha = 1;
+  });
+  ctx.font = '600 10.5px "Barlow Condensed", sans-serif'; ctx.fillStyle = '#8BA2A6';
+  ctx.fillText(sel ? `${sel.name.toUpperCase()} PHOTON: ${photonEV(sel.wl).toFixed(2)} eV ≈ ${rungsFor(photonEV(sel.wl)).toFixed(1)} RUNGS` : 'ARROWS: PHOTON ENERGY OF EACH COLOUR (eV)', 4, h - 9);
+}
+/* how far each colour gets before pure water has absorbed 90% of it, on a linear scale */
+function m0Reach() {
+  const { ctx, w, h } = M0.reach, sel = PT[M0.st.colour];
+  ctx.globalAlpha = 1; ctx.fillStyle = '#0b171c'; ctx.fillRect(0, 0, w, h);
+  const x0 = 72, x1 = w - 46, dMax = 400, X = d => x0 + (x1 - x0) * Math.min(d, dMax) / dMax;
+  ctx.textBaseline = 'alphabetic'; ctx.font = '600 10px "JetBrains Mono", monospace';
+  [0, 100, 200, 300, 400].forEach(d => {
+    ctx.fillStyle = 'rgba(227,236,234,.12)'; ctx.fillRect(Math.round(X(d)), 8, 1, h - 30);
+    ctx.fillStyle = '#8BA2A6'; ctx.textAlign = 'center'; ctx.fillText(d ? `${d} m` : '0', X(d), h - 9);
+  });
+  ctx.textAlign = 'left';
+  PHOTON_TYPES.forEach((p, i) => {
+    const y = 10 + i * 23, d = Math.log(10) / p.a;
+    ctx.globalAlpha = !sel || sel === p ? 1 : 0.3;
+    ctx.fillStyle = '#E3ECEA'; ctx.font = '600 12px "Barlow Condensed", sans-serif'; ctx.fillText(p.name.toUpperCase(), 6, y + 11);
+    ctx.fillStyle = p.col; ctx.fillRect(x0, y + 1, Math.max(2, X(d) - x0), 13);
+    ctx.fillStyle = '#E3ECEA'; ctx.font = '600 10.5px "JetBrains Mono", monospace'; ctx.fillText(fmtLen(d), Math.max(x0 + 2, X(d)) + 5, y + 11.5);
+    ctx.globalAlpha = 1;
+  });
+}
+
+(function panelM0() {
+  const m = modShell(0, 'Why water absorbs red light', 'Light travels as photons, and each photon carries a packet of energy set by its colour. A water molecule can only take in energy in fixed steps, by making its O\u2060–\u2060H bonds vibrate harder. Fire photons into the water and watch which colours get through.');
+  const g = groupBox(m, 'Controls');
+  segmented(g, { id: 'm0-col', label: 'Photons', value: 'white', options: [['white', '<span class="sw rainbow"></span>White light'], ...PHOTON_TYPES.map(p => [p.key, `<span class="sw" style="background:${p.col}"></span>${p.name}`])] },
+    v => { M0.st.colour = v; M0.absLabel.show = false; M0.absLabelT = 0; m0Update(); });
+  const row = el('div', { class: 'btnrow' });
+  const fire = el('button', { type: 'button', class: 'btn primary', id: 'm0-fire' }, 'Fire 12 photons');
+  const reset = el('button', { type: 'button', class: 'btn', id: 'm0-reset' }, 'Reset counts');
+  fire.addEventListener('click', fireBurst);
+  reset.addEventListener('click', () => { PHOTON_TYPES.forEach(p => { M0.tally[p.key] = { abs: 0, pass: 0 }; }); m0Tally(); });
+  row.append(fire, reset); g.appendChild(row);
+  toggle(g, { id: 'm0-stream', label: 'Continuous stream of photons', value: false }, v => { M0.st.stream = v; });
+  slider(g, { id: 'm0-speed', label: 'Animation speed', min: 0.25, max: 2, step: 0.05, value: 1, fmt: v => v.toFixed(2) + '×' }, v => { M0.st.speed = v; });
+  const r = el('dl', { class: 'readouts' }); m.appendChild(r); M0.readEl = r;
+  const tl = groupBox(m, 'Photons so far');
+  const td = el('dl', { class: 'readouts' }); tl.appendChild(td); M0.tallyEl = td;
+  M0.ladder = insetBox(m, 'The O\u2060–\u2060H energy ladder', 360, 236, 'Each rung is one more step of O\u2060–\u2060H stretching. To absorb a photon, a molecule must climb several rungs in one jump. The bars show how strongly pure water absorbs at each rung’s band (log scale, approximate): every extra rung is at least four times weaker.');
+  M0.reach = insetBox(m, 'How far each colour gets in pure water', 360, 196, 'Distance after which pure water has absorbed 90% of each colour (Pope and Fry 1997; infrared approximate). In the sea, plankton, sediment and dissolved matter shorten these distances, especially for blue: see the Light in water tab.');
+  const how = groupBox(m, 'How it works');
+  how.appendChild(el('ol', { class: 'ws-list how' }, `
+    <li>A photon’s energy is set by its colour: red carries about 1.9 eV, blue about 2.8 eV and violet 3.1 eV.</li>
+    <li>Water can take in that energy only by making an O\u2060–\u2060H bond vibrate harder. Vibration energy comes in steps, like the rungs of a ladder, about 0.4 eV apart.</li>
+    <li>To absorb a photon, a molecule must climb several rungs in one jump. The more rungs, the less likely the jump.</li>
+    <li>Red needs about 4 to 5 rungs, so water absorbs it within a few metres. Blue needs about 7, so in pure water it travels hundreds of metres. Infrared needs only about 3, so it is gone within centimetres.</li>
+    <li>So red is not absorbed because it is weak: violet carries the most energy, yet pure water absorbs it least. What matters is how many rungs the photon’s energy reaches.</li>
+    <li>The absorbed energy makes the molecule vibrate, and within about a trillionth of a second that vibration spreads to its neighbours as heat.</li>`));
+  M0.viewsFn = () => {
+    const aspect = Math.max(0.4, stage.clientWidth / Math.max(1, stage.clientHeight));
+    const r = clamp(11.5 / (Math.tan(rad(19)) * aspect), 22, 44);
+    return { side: { t: V(0, 0, 0), r, az: 0, el: 0.02 }, d3: { t: V(0, -0.3, 0), r: r * 1.04, az: -0.42, el: 0.2 } };
+  };
+})();
+
+/* =====================================================================
    MODULE 1 — FOCUS IN AIR (thin lens)
    ===================================================================== */
 const FSTOPS = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
@@ -989,13 +1310,13 @@ function opticPost(g, x, yTop, base = -2.42) {
     g.add(f); s.mesh = f;
     opticPost(g, x, s.y - 0.18);
     dot(M1.ov, V(x, s.y, 0), '#ffffff', 0.05);
-    s.label = mkLabel(0, `${s.name} · ${s.d} m`, s.color);
+    s.label = mkLabel(1, `${s.name} · ${s.d} m`, s.color);
     s.label.pos.set(x, s.y + 0.5, 0);
   });
-  M1.lensLabel = mkLabel(0, 'Lens + aperture'); M1.lensLabel.pos.set(0, 2.25, 0);
-  M1.sensorLabel = mkLabel(0, 'Sensor');
+  M1.lensLabel = mkLabel(1, 'Lens + aperture'); M1.lensLabel.pos.set(0, 2.25, 0);
+  M1.sensorLabel = mkLabel(1, 'Sensor');
   M1.focalDot = dot(M1.ov, V(0, 0, 0), '#E3ECEA', 0.05);
-  M1.focalLabel = mkLabel(0, 'f (focus at ∞)', '#8BA2A6'); M1.focalLabel.lift = -1;
+  M1.focalLabel = mkLabel(1, 'f (focus at ∞)', '#8BA2A6'); M1.focalLabel.lift = -1;
 })();
 M1.env = () => {
   setSky({ top: '#3a474d', hor: '#1a2226', bot: '#07090a', boxes: true });
@@ -1092,7 +1413,7 @@ function m1Inset(f) {
   ctx.fillText(`${f} mm · f/${N} · focus ${fmtDist(M1.st.focus)}`, 10, h - 10);
 }
 (function panelM1() {
-  const m = modShell(0, 'Why a camera must focus', 'A thin lens on an optical bench. Move the focus and watch where each fish’s cone of light comes to a point, and what that does to the photo.');
+  const m = modShell(1, 'Why a camera must focus', 'A thin lens on an optical bench. Move the focus and watch where each fish’s cone of light comes to a point, and what that does to the photo.');
   const g = groupBox(m, 'Controls');
   const focusSl = slider(g, { id: 'm1-focus', label: 'Focus distance', min: 0, max: 1000, step: 1, value: 1000 * Math.log(1.2 / 0.3) / Math.log(5 / 0.3), fmt: v => fmtDist(0.3 * (5 / 0.3) ** (v / 1000)) }, v => { M1.st.focus = 0.3 * (5 / 0.3) ** (v / 1000); m1Update(); });
   slider(g, { id: 'm1-ap', label: 'Aperture', min: 0, max: FSTOPS.length - 1, step: 1, value: M1.st.Ni, fmt: v => 'f/' + FSTOPS[v] }, v => { M1.st.Ni = v; m1Update(); });
@@ -1182,11 +1503,11 @@ function makeSeagrass(count, area, len, seed) {
   // fish and its virtual image
   M2.fish = makeFish({ back: '#C99A12', flank: '#EBC02E', belly: '#FFF6D2', pattern: 'bars', accent: '#6E4F05', water: true, swim: 0.05, phase: 0, freq: 6 }); M2.fish.scale.setScalar(4); M2.fish.rotation.y = Math.PI / 2 - 0.75; g.add(M2.fish);
   M2.ghost = makeFish({ back: '#F2D15A', flank: '#F6DE84', belly: '#FFF7DA', opacity: 0.3, swim: 0.05, phase: 0, freq: 6 }); M2.ghost.rotation.y = Math.PI / 2 - 0.75; M2.ov.add(M2.ghost);
-  M2.fishLabel = mkLabel(1, 'Real fish', '#F2D15A');
-  M2.ghostLabel = mkLabel(1, 'Where the camera sees it', '#F2B64E');
-  M2.portLabel = mkLabel(1, 'Flat port');
-  M2.fovLabel = mkLabel(1, '', '#43A9C6'); M2.fovLabel.lift = -1;
-  M2.airLabel = mkLabel(1, '', '#F2B64E');
+  M2.fishLabel = mkLabel(2, 'Real fish', '#F2D15A');
+  M2.ghostLabel = mkLabel(2, 'Where the camera sees it', '#F2B64E');
+  M2.portLabel = mkLabel(2, 'Flat port');
+  M2.fovLabel = mkLabel(2, '', '#43A9C6'); M2.fovLabel.lift = -1;
+  M2.airLabel = mkLabel(2, '', '#F2B64E');
 })();
 M2.env = () => {
   const wet = M2.st.medium === 'water';
@@ -1415,7 +1736,7 @@ function m2Inset(o) {
   ctx.fillText(`${water ? 'underwater' : 'in air'} · ${st.port} port · ${st.fov}° lens`, 10, h - 10);
 }
 (function panelM2() {
-  const m = modShell(1, 'What the port does underwater', 'The same camera in a housing. Light has to cross the port from water into air before it reaches the lens, and the port’s shape decides what happens.');
+  const m = modShell(2, 'What the port does underwater', 'The same camera in a housing. Light has to cross the port from water into air before it reaches the lens, and the port’s shape decides what happens.');
   const g = groupBox(m, 'Controls');
   segmented(g, { id: 'm2-medium', label: 'Housing is in', value: 'water', options: [['water', 'Water'], ['air', 'Air']] }, v => { M2.st.medium = v; m2Update(); });
   segmented(g, { id: 'm2-port', label: 'Port type', value: 'flat', options: [['flat', 'Flat port'], ['dome', 'Dome port']] }, v => { M2.st.port = v; m2Update(); });
@@ -1537,7 +1858,7 @@ const M3 = {
       f.scale.setScalar(1.1); g.add(f);
       M3.fish.push({ f, c: V(-9.5 + k * 0.8, -dm / 2 + (i - 1) * 0.3, 1.5 - k * 0.4), R: 1.6 + i * 0.35, w: 0.3 + i * 0.04, ph: i * 2.1 + k });
     }
-    const L = mkLabel(2, `Red fish · ${dm} m`, '#F0735A'); L.pos.set(-9.5 + k * 0.8, -dm / 2 + 1.0, 1.5 - k * 0.4);
+    const L = mkLabel(3, `Red fish · ${dm} m`, '#F0735A'); L.pos.set(-9.5 + k * 0.8, -dm / 2 + 1.0, 1.5 - k * 0.4);
   });
   // depth staff on the cut face
   M3.colCanvas = document.createElement('canvas'); M3.colCanvas.width = 4; M3.colCanvas.height = 256;
@@ -1546,9 +1867,9 @@ const M3 = {
   staff.position.set(-13, -10, 6.1); M3.ov.add(staff);
   for (let m = 0; m <= 40; m += 5) {
     seg(M3.ov, V(-13.3, -m / 2, 6.2), V(-12.4, -m / 2, 6.2), '#E3ECEA', 0.022, 0.9);
-    const L = mkLabel(2, `${m} m`, '#8BA2A6'); L.pos.set(-14.1, -m / 2, 6.2); L.lift = -1;
+    const L = mkLabel(3, `${m} m`, '#8BA2A6'); L.pos.set(-14.1, -m / 2, 6.2); L.lift = -1;
   }
-  M3.staffLabel = mkLabel(2, 'Daylight left', '#E3ECEA'); M3.staffLabel.pos.set(-13, 0.9, 6.2);
+  M3.staffLabel = mkLabel(3, 'Daylight left', '#E3ECEA'); M3.staffLabel.pos.set(-13, 0.9, 6.2);
   // sea surface: animated waves that reflect the sky
   const sm = new THREE.MeshPhysicalMaterial({ color: lin('#0c4a5a'), roughness: 0.05, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, transparent: true, opacity: 0.55, envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false });
   sm.onBeforeCompile = sh => {
@@ -1563,13 +1884,13 @@ const M3 = {
   const rim = new THREE.Mesh(new THREE.BoxGeometry(80, 0.04, 0.04), basicMat('#bfe6f0', 0.5)); rim.position.set(0, 0, 6); M3.ov.add(rim);
   M3.sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: SPRITE, color: lin('#ffe2a0'), blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   M3.sun.scale.setScalar(5); M3.ov.add(M3.sun);
-  M3.sunLabel = mkLabel(2, 'Sun', '#FFD98A');
-  M3.camLabel = mkLabel(2, 'Camera', '#E3ECEA');
-  M3.slateLabel = mkLabel(2, 'Colour slate', '#E3ECEA');
-  M3.snellLabel = mkLabel(2, "Snell's window · 97°", '#FFD98A');
-  M3.tirLabel = mkLabel(2, 'Mirror (total internal reflection)', '#8BA2A6'); M3.tirLabel.lift = -1;
-  M3.reflLabel = mkLabel(2, '', '#FFD98A');
-  M3.refrLabel = mkLabel(2, '', '#FFD98A'); M3.refrLabel.lift = -1;
+  M3.sunLabel = mkLabel(3, 'Sun', '#FFD98A');
+  M3.camLabel = mkLabel(3, 'Camera', '#E3ECEA');
+  M3.slateLabel = mkLabel(3, 'Colour slate', '#E3ECEA');
+  M3.snellLabel = mkLabel(3, "Snell's window · 97°", '#FFD98A');
+  M3.tirLabel = mkLabel(3, 'Mirror (total internal reflection)', '#8BA2A6'); M3.tirLabel.lift = -1;
+  M3.reflLabel = mkLabel(3, '', '#FFD98A');
+  M3.refrLabel = mkLabel(3, '', '#FFD98A'); M3.refrLabel.lift = -1;
   // marine snow through the column, plus the particles the strobe can light
   const pm = () => new THREE.PointsMaterial({ size: 0.13, map: SPRITE, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false });
   M3.snowGeo = new THREE.BufferGeometry(); M3.ov.add(new THREE.Points(M3.snowGeo, pm()));
@@ -1831,7 +2152,7 @@ function m3Inset(L, pf, C) {
   ctx.fillText(`${st.strobe ? 'strobe' : 'ambient'} · ${st.wb ? 'custom WB' : 'daylight WB'}`, 10, h - 8);
 }
 (function panelM3() {
-  const m = modShell(2, 'What water does to light', 'Sunlight enters the sea, bends, and loses its colours one by one. Put a colour slate at depth and see what the camera actually records.');
+  const m = modShell(3, 'What water does to light', 'Sunlight enters the sea, bends, and loses its colours one by one. Put a colour slate at depth and see what the camera actually records.');
   const g = groupBox(m, 'Controls');
   const turbIn = slider(g, { id: 'm3-turb', label: 'Turbidity', min: 0, max: 100, step: 1, value: 50, fmt: v => waterLabel(v) }, v => {
     const snap = [0, 50, 100].find(a => Math.abs(a - v) <= 3);
@@ -1855,10 +2176,10 @@ function m3Inset(L, pf, C) {
 })();
 
 /* =====================================================================
-   WORKSHEETS — tabs 2 and 3. Answers use the numbers this lab displays.
+   WORKSHEETS — tabs 3 and 4. Questions use the numbers this lab displays.
    ===================================================================== */
 const WORKSHEETS = {
-  1: {
+  2: {
     title: 'Worksheet: behind the port',
     note: 'Set the controls as each question says, then read the numbers off the readouts under the viewfinder.',
     items: [
@@ -1896,7 +2217,7 @@ const WORKSHEETS = {
       }
     ]
   },
-  2: {
+  3: {
     title: 'Worksheet: light in water',
     note: 'Set the controls as each question says. The turbidity slider clicks into place at Clear ocean, Coastal and Turbid estuary. Use the readouts, the spectrum bars in the camera view and the 3D column.',
     items: [
@@ -1971,38 +2292,43 @@ function buildWorksheet(modIndex) {
     try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
   });
 }
-buildWorksheet(1);
 buildWorksheet(2);
+buildWorksheet(3);
 panel.appendChild(el('footer', { class: 'credit' }, '© 2026 Fabio Favoretto · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a> · 3D by <a href="https://threejs.org/" target="_blank" rel="noopener">three.js</a>'));
 /* ---------- module switching ---------- */
 const MODS = [
+  { m: M0, update: m0Update, views: () => M0.viewsFn() },
   { m: M1, update: m1Update, views: () => M1.views },
   { m: M2, update: m2Update, views: () => M2.viewsFn() },
   { m: M3, update: m3Update, views: () => M3.views }
 ];
 let active = 0;
 const scaleNote = document.getElementById('scalenote');
+const TAB_KEYS = ['photons', 'focus', 'port', 'light'];
 function setMod(i, instant) {
   active = i;
   MODS.forEach((o, k) => { o.m.group.visible = o.m.ov.visible = k === i; document.getElementById('mod-' + k).hidden = k !== i; });
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(+t.dataset.mod === i)));
-  orb.azLim = i === 2 ? 1.2 : null;
-  if (i === 0) M1.env();
+  orb.azLim = i === 3 ? 1.2 : null;
+  if (i === 0) M0.env();
+  if (i === 1) M1.env();
   MODS[i].update();
   scaleNote.textContent = MODS[i].m.scale;
   goTo(MODS[i].views().d3, instant);
   panel.scrollTop = 0;
-  try { localStorage.setItem('optics-bench-tab', String(i)); } catch (e) { /* storage unavailable */ }
+  try { localStorage.setItem('optics-bench-tab', TAB_KEYS[i]); } catch (e) { /* storage unavailable */ }
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setMod(+t.dataset.mod)));
 document.getElementById('v-side').addEventListener('click', () => goTo(MODS[active].views().side));
 document.getElementById('v-3d').addEventListener('click', () => goTo(MODS[active].views().d3));
 MODS.forEach(o => o.update());
 let start = 0;
-try { const s = parseInt(localStorage.getItem('optics-bench-tab'), 10); if (s >= 0 && s <= 2) start = s; } catch (e) { /* ignore */ }
-const hashMap = { focus: 0, port: 1, light: 2 };
-if (location.hash.slice(1) in hashMap) start = hashMap[location.hash.slice(1)];
+try { const s = TAB_KEYS.indexOf(localStorage.getItem('optics-bench-tab')); if (s >= 0) start = s; } catch (e) { /* ignore */ }
+if (TAB_KEYS.includes(location.hash.slice(1))) start = TAB_KEYS.indexOf(location.hash.slice(1));
 setMod(start, true);
+if (document.fonts && document.fonts.load) {
+  Promise.all(['600 12px "Barlow Condensed"', '600 10px "JetBrains Mono"'].map(f => document.fonts.load(f))).then(() => MODS[active].update(), () => {});
+}
 
 /* ---------- loop ---------- */
 let lastW = 0, lastH = 0;
@@ -2024,7 +2350,8 @@ function frame() {
   const t = reduceMotion ? 0 : clock.getElapsedTime();
   UW.uTime.value = t;
   WAG.forEach(o => { o.pivot.rotation.y = Math.sin(t * o.speed + o.phase) * o.amp; });
-  if (active === 2) M3.fish.forEach(o => {
+  if (active === 0) m0Tick(frameDt, t);
+  if (active === 3) M3.fish.forEach(o => {
     const a = o.ph + t * o.w;
     o.f.position.set(o.c.x + Math.cos(a) * o.R, o.c.y + Math.sin(a * 2.3) * 0.08, o.c.z + Math.sin(a) * o.R * 0.6);
     o.f.rotation.y = Math.atan2(-Math.cos(a) * o.R * 0.6, -Math.sin(a) * o.R);
@@ -2032,7 +2359,7 @@ function frame() {
   if (M3.turbNow !== M3.st.turb) {
     const dT = M3.st.turb - M3.turbNow;
     M3.turbNow = Math.abs(dT) < 0.4 ? M3.st.turb : M3.turbNow + dT * (1 - Math.exp(-frameDt / 0.16));
-    if (active === 2) m3Update();
+    if (active === 3) m3Update();
   }
   if (envDirty && performance.now() - envAt > 150) rebuildEnv();
   renderFrame();

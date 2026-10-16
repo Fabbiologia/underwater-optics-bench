@@ -6,19 +6,20 @@ An interactive 3D lab for teaching underwater imaging, made for the OS207 *Light
 
 ## What's in it
 
-1. **Focus in air** – a thin lens on an optical bench. Move the focus, aperture and focal length and watch each subject's cone of light converge in front of, on or behind the sensor, with a simulated photo showing the blur.
-2. **Behind the port** – a camera housing on a seagrass bed. Compare flat and dome ports: apparent distance and size, angle of view, colour fringing and the dome's virtual image.
-3. **Light in water** – a cut-away water column. Surface reflection and refraction, Snell's window, colour loss with depth, a turbidity slider from clear ocean to turbid estuary, strobes, backscatter and white balance.
+1. **Photons and water** – a micro view of water molecules. Fire photons of different colours into the water and see why red is absorbed within a few metres while blue travels much further: each photon's energy is compared with the steps of O–H vibration a water molecule can absorb.
+2. **Focus in air** – a thin lens on an optical bench. Move the focus, aperture and focal length and watch each subject's cone of light converge in front of, on or behind the sensor, with a simulated photo showing the blur.
+3. **Behind the port** – a camera housing on a seagrass bed. Compare flat and dome ports: apparent distance and size, angle of view, colour fringing and the dome's virtual image.
+4. **Light in water** – a cut-away water column. Surface reflection and refraction, Snell's window, colour loss with depth, a turbidity slider from clear ocean to turbid estuary, strobes, backscatter and white balance.
 
-Tabs 2 and 3 include worksheets for students. Model answers and teaching notes are not published here; they live in the lecturer's offline teaching guide.
+Tabs 3 and 4 include worksheets for students. Model answers and teaching notes are not published here; they live in the lecturer's offline teaching guide.
 
-Link straight to a tab with `#focus`, `#port` or `#light` at the end of the address.
+Link straight to a tab with `#photons`, `#focus`, `#port` or `#light` at the end of the address.
 
 ## Notes
 
 - Everything is in one file, `index.html`. The 3D library ([three.js](https://threejs.org/) r128) loads from cdnjs, so the page needs an internet connection.
 - It needs a current browser with WebGL 2. The water tab is demanding on older or low-power laptops.
-- Water attenuation values are rounded approximations after Jerlov water types, for teaching.
+- Water attenuation values are rounded approximations after Jerlov water types, for teaching. The photons tab uses pure-water absorption after Pope and Fry (1997); its infrared values and overtone band strengths are approximate.
 
 ## Licence
 
